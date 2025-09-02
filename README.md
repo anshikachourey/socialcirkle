@@ -13,5 +13,5 @@ A real-time location-based social networking app where users can discover and jo
 - `/backend` – Placeholder for future backend logic
 - `/docs` – Planning docs, wireframes, UI sketches
 
-## ✅ Status
+## Status
 Scaffolding complete. Firebase Auth & Map integration WIP.

@@ -1,6 +1,6 @@
 # SocialCirkle
 
-A real-time location-based social networking app where users can discover and join nearby meetups and casual events.
+SocialCirkle is a real-time location-based social networking app that helps users find and connect with others nearby in public spaces (e.g., college campuses, cafes, events). The goal is to promote spontaneous, safe, and shared social experiences based on current location and common interests.
 
 ## Features (planned)
 - Firebase Authentication

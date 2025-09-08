@@ -1,11 +1,10 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { auth } from "../firebaseConfig";
-import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function HomeScreen({ navigation }: any) {
   async function handleLogout() {
-    await signOut(auth);
+    await auth.signOut();                // RNFirebase instance method
     navigation.replace("Login");
   }
 

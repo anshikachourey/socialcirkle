@@ -5,3 +5,8 @@ dist/
 build/
 .DS_Store
 .env
+
+# backups
+node_modules.root-bak/
+frontend/node_modules.root-bak/
+metro.config.root.bak

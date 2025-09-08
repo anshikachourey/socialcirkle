@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "896069729535",
+    "project_id": "socialcirkle-42d8b",
+    "storage_bucket": "socialcirkle-42d8b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:896069729535:android:1b17f37e1836333a9a60ca",
+        "android_client_info": {
+          "package_name": "com.anonymous.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1M9MQhBWfjX26SP1cgyb0m_rgTOZxgFs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

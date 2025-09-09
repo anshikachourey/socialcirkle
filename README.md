@@ -22,3 +22,4 @@ SocialCirkle is a real-time location-based social networking app that helps user
 Scaffolding started. Auth & Map integration in progress.
 
 
+# midnight commit

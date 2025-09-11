@@ -10,3 +10,9 @@ build/
 node_modules.root-bak/
 frontend/node_modules.root-bak/
 metro.config.root.bak
+
+# Backend
+backend/node_modules
+backend/dist
+backend/.env
+backend/service-account.json

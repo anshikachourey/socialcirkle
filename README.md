@@ -1,25 +1,27 @@
-# SocialCirkle
+# 🌐 SocialCirkle
 
-SocialCirkle is a real-time location-based social networking app that helps users find and connect with others nearby in public spaces (e.g., college campuses, cafes, events). The goal is to promote spontaneous, safe, and shared social experiences based on current location and common interests.
+**SocialCirkle** is a real-time, location-based social networking app that enables users to discover and connect with others nearby in public spaces such as campuses, cafes, and events. By combining live geolocation, group “Cirkles,” and instant messaging, the app fosters spontaneous, safe, and shared social interactions around common interests.  
 
-## Features (planned)
-- Firebase Authentication
-- Real-time user location with Google Maps API
-- Live feed of nearby “circles” (events)
-- Post, join, or request events
+---
 
-## Tech Stack
-- React Native + Expo
-- Firebase (Auth + Firestore)
-- Google Maps API
+## ✨ Key Features (Planned & In Progress)
+- 🔑 **Authentication:** Secure login with Firebase Authentication (email, Google sign-in).  
+- 📍 **Live Location Sharing:** Real-time GPS tracking with Google Maps API integration.  
+- 🫂 **Cirkles / Events:** Create or join public/private groups with interest tags and optional pinned locations.  
+- 💬 **Instant Messaging:** One-on-one and group chats within active Cirkles.  
+- 🔒 **Privacy & Safety:** Radius limits, location toggle, reporting, and blocking for user safety.  
+- 🔔 **Push Notifications (Planned):** Real-time updates with Firebase Cloud Messaging.  
+- 🎨 **UI Enhancements (Planned):** Dark mode, onboarding screens, and event suggestions.  
 
-## Folder Structure (planned)
-- `/frontend` – React Native app
-- `/backend` – (placeholder) future APIs / server
-- `/docs` – planning docs, wireframes
+---
 
-## Status
-Scaffolding started. Auth & Map integration in progress.
+## 🛠️ Tech Stack
+**Frontend (Mobile):** React Native (Expo)  
+**Backend & Database:** Firebase Firestore & Realtime DB (Node.js + Express + MongoDB optional)  
+**APIs & Integrations:** Google Maps API, Firebase Cloud Functions, Gifted Chat SDK  
+**Authentication & Security:** Firebase Auth + Rules  
+**CI/CD & Deployment:** GitHub, Expo Go / EAS Build (with optional Vercel/Netlify for admin panel)  
+
+---
 
 
-# midnight commit

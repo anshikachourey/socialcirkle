@@ -1,13 +1,17 @@
+// src/lib/firebase.native.ts
 import rnAuth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
-import firestore from "@react-native-firebase/firestore";
+import rnFirestore from "@react-native-firebase/firestore";
 
-// Export instances so other files can do: import { auth, db } from "@/lib/firebase"
+// Instances
 export const auth = rnAuth();
-export const db = firestore();
+export const db = rnFirestore();
+
+// Export firestore *module* too, so we can use FieldValue like firestore.FieldValue.serverTimestamp()
+export const firestore = rnFirestore;
 
 export type { FirebaseAuthTypes };
 
-// Optional helpers (nice to use in UI code)
+// Cross-platform helpers (same names used on web)
 export function onAuthChanged(cb: (u: FirebaseAuthTypes.User | null) => void) {
   return auth.onAuthStateChanged(cb);
 }
@@ -23,3 +27,4 @@ export async function signInEmail(email: string, password: string) {
 export function signOutUser() {
   return auth.signOut();
 }
+

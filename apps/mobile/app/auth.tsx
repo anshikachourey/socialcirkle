@@ -2,8 +2,7 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, View, StyleSheet } from "react-native";
 import { Text, TextInput, Button, useTheme } from "react-native-paper";
-import { auth, db } from "@/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import { auth, db, firestore, signInEmail, signUpEmail } from "@/lib/firebase";
 
 export default function AuthScreen() {
   const theme = useTheme();
@@ -22,9 +21,9 @@ export default function AuthScreen() {
     try {
       setSubmitting(true);
       if (isSignUp) {
-        await auth.createUserWithEmailAndPassword(e, password);
+        await signUpEmail(e, password);
       } else {
-        await auth.signInWithEmailAndPassword(e, password);
+        await signInEmail(e, password);
       }
 
       // Optional: upsert user doc

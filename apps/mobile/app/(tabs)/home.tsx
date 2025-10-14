@@ -1,12 +1,11 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
-import { auth, db } from "@/lib/firebase";
-import firestore from "@react-native-firebase/firestore";   // ✅ for FieldValue
+import { auth, db, firestore, signOutUser } from "@/lib/firebase";
 
 export default function Home() {
   async function out() {
-    await auth.signOut();                                    // ✅ RNFirebase
+    await signOutUser();                                   // ✅ RNFirebase
     router.replace("/login");
   }
 

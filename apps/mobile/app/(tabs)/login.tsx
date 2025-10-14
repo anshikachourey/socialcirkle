@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
-import { auth, db } from "@/lib/firebase";                 // our RNFirebase instances
-import firestore from "@react-native-firebase/firestore";   // for FieldValue.serverTimestamp()
+import { auth, db, firestore, signInEmail, signUpEmail } from "@/lib/firebase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,12 +12,12 @@ export default function Login() {
 
     try {
       // Try sign in
-      await auth.signInWithEmailAndPassword(email.trim(), password);
+      await signInEmail(emailTrim, password);
     } catch (e: any) {
       // If user doesn't exist, create then continue
       if (e?.code === "auth/user-not-found") {
         try {
-          await auth.createUserWithEmailAndPassword(email.trim(), password);
+          await signUpEmail(emailTrim, password);
         } catch (e2: any) {
           Alert.alert("Sign up failed", e2?.message ?? "Unknown error");
           return;

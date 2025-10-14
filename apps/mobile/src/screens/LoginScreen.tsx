@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { auth } from "@/lib/firebase";
+import { auth, signInEmail, signUpEmail } from "@/lib/firebase";
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -9,12 +9,12 @@ export default function LoginScreen({ navigation }: any) {
   async function handleLogin() {
     const e = email.trim();
     try {
-      await auth.signInWithEmailAndPassword(e, password);             // ✅ RNFirebase
+      await signInEmail(e, password);            // ✅ RNFirebase
       navigation.replace("Home");
     } catch (err: any) {
       if (err?.code === "auth/user-not-found") {
         try {
-          await auth.createUserWithEmailAndPassword(e, password);     // ✅ RNFirebase
+          await signUpEmail(e, password);     // ✅ RNFirebase
           navigation.replace("Home");
         } catch (e2: any) {
           Alert.alert("Sign up failed", e2?.message ?? "Unknown error");

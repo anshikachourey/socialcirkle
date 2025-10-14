@@ -1,10 +1,10 @@
 // src/lib/auth-context.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { auth } from "@/lib/firebase";
-import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
+import { onAuthChanged, signInEmail, signUpEmail, signOutUser, auth } from "@/lib/firebase";
+import type { FirebaseAuthTypes } from "@/lib/firebase";
 
 type AuthContextType = {
-  user: FirebaseAuthTypes.User | null;
+  user: FirebaseAuthTypes["User"] | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
@@ -14,11 +14,11 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [user, setUser] = useState<FirebaseAuthTypes["User"] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => {
+    const unsub = onAuthChanged((u) => {
       setUser(u);
       setLoading(false);
     });
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp: AuthContextType["signUp"] = async (email, password) => {
     try {
-      await auth.createUserWithEmailAndPassword(email.trim(), password);
+      await signUpEmail(email, password);
       return null;
     } catch (e: any) {
       return e?.message ?? "An error occurred during sign up";
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn: AuthContextType["signIn"] = async (email, password) => {
     try {
-      await auth.signInWithEmailAndPassword(email.trim(), password);
+      await signInEmail(email, password);
       return null;
     } catch (e: any) {
       return e?.message ?? "An error occurred during log in";
@@ -44,9 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOutFn: AuthContextType["signOut"] = async () => {
-    await auth.signOut();
-    // onAuthStateChanged will set user=null; this line ensures immediate UI update:
-    setUser(null);
+    await signOutUser();
+    // onAuthChanged will set user=null; updating immediately helps UI
+    setUser(auth.currentUser);
   };
 
   const value = useMemo(() => ({ user, loading, signUp, signIn, signOut: signOutFn }), [user, loading]);

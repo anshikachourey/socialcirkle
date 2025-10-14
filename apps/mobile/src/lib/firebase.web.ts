@@ -2,7 +2,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth, onAuthStateChanged as webOnAuthChanged,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile,
+  setPersistence, browserLocalPersistence
 } from "firebase/auth";
 import {
     getFirestore, serverTimestamp,
@@ -26,6 +27,10 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch((e) => {
+    // optional: log but don't crash
+    console.warn("Auth persistence error", e);
+  });
 const _db = getFirestore(app);
 
 // --- Adapter so web code can call RNFirebase-style APIs like db.collection(...).doc(...).set(...)

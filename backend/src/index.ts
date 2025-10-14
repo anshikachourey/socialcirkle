@@ -22,6 +22,9 @@ app.get("/health", (_req, res) => {
 app.get("/protected", verifyFirebaseToken, (req, res) => {
   res.json({ ok: true, uid: (req as any).user.uid });
 });
+app.get("/", (_req, res) => {
+  res.send("SocialCirkle API up 🚀");
+});
 
 app.listen(env.PORT, () => {
   console.log(`API listening on http://localhost:${env.PORT}`);

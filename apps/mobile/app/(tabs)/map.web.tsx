@@ -2,15 +2,16 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-export default function MapWebStub() {
+export default function MapWeb() {
   return (
     <View style={s.c}>
-      <Text style={s.t}>Map is native-only for now</Text>
-      <Text>Open the app on iOS/Android to see the live map.</Text>
+      <Text style={s.t}>Map is mobile-only in this MVP.</Text>
+      <Text style={s.d}>Open on iOS/Android to see the native map.</Text>
     </View>
   );
 }
 const s = StyleSheet.create({
-  c: { flex: 1, padding: 24, justifyContent: "center", alignItems: "center" },
-  t: { fontSize: 20, fontWeight: "700", marginBottom: 8 },
+  c: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  t: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  d: { color: "#6b7280" },
 });

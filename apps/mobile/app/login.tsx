@@ -1,6 +1,6 @@
+// app/login.tsx
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
 import {
   auth, db, firestore,
   signInEmail, signUpEmail, onAuthChanged
@@ -13,11 +13,9 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // If already signed in, bounce to /home
+  // Optional: show “already signed in” hint, but don't navigate.
   useEffect(() => {
-    const unsub = onAuthChanged((u) => {
-      if (u) router.replace("/home");
-    });
+    const unsub = onAuthChanged(() => {});
     return unsub;
   }, []);
 
@@ -28,21 +26,18 @@ export default function Login() {
     return null;
   }
 
-  async function afterAuth(upsertEmail: string) {
-    // Leave the screen first
-    router.replace("/home");
-    // Fire-and-forget user upsert
+  async function upsertUserDoc(upsertEmail: string) {
     const uid = auth.currentUser?.uid;
-    if (uid) {
-      db.collection("users").doc(uid).set(
-        {
-          email: auth.currentUser?.email ?? upsertEmail,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      ).catch((e: any) => console.warn("User upsert failed:", e?.message ?? e));
-    }
+    if (!uid) return;
+    await db.collection("users").doc(uid).set(
+      {
+        email: auth.currentUser?.email ?? upsertEmail,
+        // don't mark profileComplete here; Setup will do that
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
   }
 
   async function handleAuth() {
@@ -52,14 +47,18 @@ export default function Login() {
 
     try {
       setSubmitting(true);
+      const e = email.trim();
       if (isSignUp) {
-        await signUpEmail(email.trim(), password);
+        await signUpEmail(e, password);
       } else {
-        await signInEmail(email.trim(), password);
+        await signInEmail(e, password);
       }
-      await afterAuth(email.trim());
-    } catch (e: any) {
-      setError(e?.message ?? (isSignUp ? "Sign up failed" : "Sign in failed"));
+      await upsertUserDoc(e);
+      // 🚫 Don't navigate here. The global guard in _layout will:
+      // - send new users to /setup
+      // - send returning users to /(tabs)/map
+    } catch (err: any) {
+      setError(err?.message ?? (isSignUp ? "Sign up failed" : "Sign in failed"));
     } finally {
       setSubmitting(false);
     }
@@ -114,3 +113,5 @@ const s = StyleSheet.create({
   linkT: { color: "#111827" },
   hint: { marginTop: 12, color: "#6b7280", fontSize: 12, textAlign: "center" },
 });
+
+

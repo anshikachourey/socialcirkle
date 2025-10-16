@@ -76,7 +76,7 @@ export default function ProfileTab() {
 
   function setCustomRadiusFromMiles() {
     const n = Number(customMiles);
-    if (Number.isNaN(n) || n <= 0) {
+    if (Number.isNaN(n)||n<= 0) {
       Alert.alert("Invalid radius", "Enter a positive number of miles.");
       return;
     }

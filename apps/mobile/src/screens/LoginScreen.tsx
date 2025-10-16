@@ -9,12 +9,12 @@ export default function LoginScreen({ navigation }: any) {
   async function handleLogin() {
     const e = email.trim();
     try {
-      await signInEmail(e, password);            // ✅ RNFirebase
+      await signInEmail(e, password);           
       navigation.replace("Home");
     } catch (err: any) {
       if (err?.code === "auth/user-not-found") {
         try {
-          await signUpEmail(e, password);     // ✅ RNFirebase
+          await signUpEmail(e, password);     
           navigation.replace("Home");
         } catch (e2: any) {
           Alert.alert("Sign up failed", e2?.message ?? "Unknown error");
@@ -46,4 +46,7 @@ const styles = StyleSheet.create({
   btnText: { color: "white", fontWeight: "600" },
   hint: { marginTop: 12, color: "#6b7280", fontSize: 12, textAlign: "center" },
 });
+
+
+
 

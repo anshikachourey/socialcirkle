@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      // any signed-in user can read user docs (adjust later if needed)
+      allow read: if isSignedIn();
+      // only the owner can write their own doc
+      allow create, update, delete: if isSelf(uid);
+    }
+  }
+}
+

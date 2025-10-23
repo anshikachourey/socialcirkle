@@ -17,10 +17,10 @@
 
 ## 🛠Tech Stack
 **Frontend (Mobile):** React Native (Expo)  
-**Backend and Database:** Firebase Firestore & Realtime DB (Node.js + Express + MongoDB optional)  
+**Backend and Database:** Firebase Firestore & Realtime DB (Node.js, Express, MongoDB)  
 **APIs and Integrations:** Google Maps API, Firebase Cloud Functions, Gifted Chat SDK  
-**Authentication and Security:** Firebase Auth + Rules  
-**CI/CD and Deployment:** GitHub, Expo Go / EAS Build (with optional Vercel/Netlify for admin panel)  
+**Authentication and Security:** Firebase Auth, Firebase Rules  
+**CI/CD and Deployment:** GitHub, Expo Go, EAS Build (with optional Vercel, Netlify for admin panel)  
 
 ---
 

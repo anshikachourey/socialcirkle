@@ -18,7 +18,7 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.btnOutlineText}>Profile</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleLogout} style={[styles.btn, { backgroundColor: "#ef4444" }]}>
-        <Text style={styles.btnText}>Sign out</Text>
+        <Text style={styles.btnText}>Sign Out</Text>
       </TouchableOpacity>
     </View>
   );

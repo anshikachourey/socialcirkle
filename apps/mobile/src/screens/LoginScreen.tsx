@@ -5,7 +5,6 @@ import { auth, signInEmail, signUpEmail } from "@/lib/firebase";
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   async function handleLogin() {
     const e = email.trim();
     try {
@@ -24,7 +23,6 @@ export default function LoginScreen({ navigation }: any) {
       }
     }
   }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>SocialCirkle</Text>
@@ -37,7 +35,6 @@ export default function LoginScreen({ navigation }: any) {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   title: { fontSize: 32, fontWeight: "700", marginBottom: 24 },

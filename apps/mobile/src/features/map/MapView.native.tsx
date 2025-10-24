@@ -1,22 +1,24 @@
 // src/features/map/MapView.native.tsx
-import React from "react";
-import { View, StyleSheet } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, StyleSheet, Text, Pressable } from "react-native";
 import MapLibreGL from "react-native-maplibre-gl";
 import { STYLE_URL, assertMapKey } from "./config";
 import { makeCircleGeoJSON } from "./geo";
 
-type Marker = { id: string; lat: number; lng: number; title?: string };
+type NMarker = { id: string; lat: number; lng: number; title?: string; status?: string };
+
 type Props = {
   center: { lat: number; lng: number };
   zoom?: number;
-  radiusMeters?: number | null; // null => worldwide (no circle)
+  radiusMeters?: number | null;
   showCircle?: boolean;
-  markers?: Marker[];
+  markers?: NMarker[];
   onMarkerPress?: (id: string) => void;
-  selfVisible?: boolean; // color your marker
+  onMarkerAction?: (action: "view" | "chat" | "edit", id: string) => void;
+  selfVisible?: boolean;
 };
 
-MapLibreGL.setAccessToken(null as any); // MapTiler key is embedded in style URL
+MapLibreGL.setAccessToken(null as any);
 
 export default function MapView({
   center,
@@ -25,69 +27,147 @@ export default function MapView({
   showCircle,
   markers = [],
   onMarkerPress,
+  onMarkerAction,
   selfVisible = false,
 }: Props) {
   assertMapKey();
 
-  const circleData =
-    showCircle && radiusMeters != null ? makeCircleGeoJSON(center, radiusMeters) : null;
+  const circleData = useMemo(
+    () => (showCircle && radiusMeters != null ? makeCircleGeoJSON(center, radiusMeters) : null),
+    [center.lat, center.lng, showCircle, radiusMeters]
+  );
 
-  // Build a point feature for "me"
-  const me = {
-    type: "FeatureCollection" as const,
-    features: [
-      {
-        type: "Feature" as const,
-        geometry: { type: "Point" as const, coordinates: [center.lng, center.lat] },
-        properties: {},
-      },
-    ],
-  };
-
-  const meFill = selfVisible ? "#ef4444" /* red */ : "#9ca3af" /* gray */;
+  const [selected, setSelected] = useState<NMarker | null>(null);
 
   return (
     <View style={styles.container}>
       <MapLibreGL.MapView style={StyleSheet.absoluteFill} styleURL={STYLE_URL}>
         <MapLibreGL.Camera zoomLevel={zoom} centerCoordinate={[center.lng, center.lat]} />
 
-        {/* Self marker colored by visibility */}
-        <MapLibreGL.ShapeSource id="me-src" shape={me as any}>
-          <MapLibreGL.CircleLayer
-            id="me-dot"
+        {/* SELF marker as colored dot with tap */}
+        <MapLibreGL.PointAnnotation
+          id="me"
+          coordinate={[center.lng, center.lat]}
+          onSelected={() => {
+            setSelected({
+              id: "me",
+              lat: center.lat,
+              lng: center.lng,
+              title: "You",
+              status: selfVisible ? "Visible" : "Hidden",
+            });
+            onMarkerPress?.("me");
+          }}
+        >
+          <View
             style={{
-              circleRadius: 6,
-              circleColor: meFill,
-              circleStrokeWidth: 2,
-              circleStrokeColor: "#ffffff",
+              width: 12,
+              height: 12,
+              borderRadius: 6,
+              backgroundColor: selfVisible ? "#ef4444" : "#9ca3af",
+              borderWidth: 2,
+              borderColor: "#fff",
             }}
           />
-        </MapLibreGL.ShapeSource>
+        </MapLibreGL.PointAnnotation>
 
-        {/* Other markers */}
+        {/* Other users */}
         {markers.map((m) => (
           <MapLibreGL.PointAnnotation
             key={m.id}
             id={m.id}
             coordinate={[m.lng, m.lat]}
             title={m.title}
-            onSelected={() => onMarkerPress?.(m.id)}
+            onSelected={() => {
+              setSelected(m);
+              onMarkerPress?.(m.id);
+            }}
           />
         ))}
 
-        {/* Visibility circle */}
+        {/* Visibility circle (tinted) */}
         {circleData && (
           <MapLibreGL.ShapeSource id="radius" shape={circleData}>
-            <MapLibreGL.FillLayer id="radius-fill" style={{ fillOpacity: 0.15 }} />
-            <MapLibreGL.LineLayer id="radius-line" style={{ lineWidth: 1 }} />
+            <MapLibreGL.FillLayer
+              id="radius-fill"
+              style={{ fillOpacity: 0.15, fillColor: selfVisible ? "#ef4444" : "#9ca3af" }}
+            />
+            <MapLibreGL.LineLayer
+              id="radius-line"
+              style={{ lineWidth: 1, lineColor: selfVisible ? "#ef4444" : "#9ca3af" }}
+            />
           </MapLibreGL.ShapeSource>
         )}
       </MapLibreGL.MapView>
+
+      {/* Bottom action sheet */}
+      {selected && (
+  <View style={styles.sheet}>
+    <Text style={styles.name}>{selected.title ?? "User"}</Text>
+    <Text style={styles.status}>{selected.status ?? "Available"}</Text>
+    <View style={{ height: 8 }} />
+
+    {selected.id === "me" ? (
+      // 👇 Self: only “Edit profile”
+      <View style={styles.row}>
+        <Pressable
+          onPress={() => onMarkerAction?.("edit", selected.id)}
+          style={[styles.btn, { backgroundColor: "#111827" }]}
+        >
+          <Text style={[styles.btnT, { color: "white" }]}>Edit profile</Text>
+        </Pressable>
+      </View>
+    ) : (
+      // 👇 Others: View + Chat
+      <View style={styles.row}>
+        <Pressable
+          onPress={() => onMarkerAction?.("view", selected.id)}
+          style={[styles.btn, { backgroundColor: "#111827" }]}
+        >
+          <Text style={[styles.btnT, { color: "white" }]}>View profile</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onMarkerAction?.("chat", selected.id)}
+          style={[styles.btn, { borderWidth: 1, borderColor: "#e5e7eb" }]}
+        >
+          <Text style={[styles.btnT, { color: "#111827" }]}>Start chat</Text>
+        </Pressable>
+      </View>
+    )}
+    <Pressable style={styles.close} onPress={() => setSelected(null)}>
+      <Text style={{ color: "#6b7280" }}>Close</Text>
+    </Pressable>
+  </View>
+)}
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  sheet: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    padding: 14,
+    backgroundColor: "white",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  name: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  status: { marginTop: 2, fontSize: 13, color: "#6b7280" },
+  row: { flexDirection: "row", gap: 10, marginTop: 10 },
+  btn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  btnT: { fontWeight: "700" },
+  close: { alignSelf: "center", marginTop: 8 },
 });
+
 

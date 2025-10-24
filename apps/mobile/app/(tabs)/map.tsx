@@ -10,7 +10,6 @@ import { onVisibleUsers, PublicUser } from "../../src/services/visibleUsers";
 import { haversineMeters } from "../../src/features/map/distance";
 
 type Center = { lat: number; lng: number };
-const MILES = (m: number) => m * 1609.344;
 
 export default function MapTab() {
   // auth state
@@ -73,19 +72,16 @@ export default function MapTab() {
     })();
   }, [uid]);
 
-  // subscribe to other visible users (MVP)
+  // subscribe to other visible users
   useEffect(() => {
     if (!uid) return;
     const off = onVisibleUsers((list) => {
-      // exclude me
-      setOthers(list.filter(u => u.id !== uid));
+      setOthers(list.filter(u => u.id !== uid)); // exclude self
     });
     return () => off?.();
   }, [uid]);
 
-  const stillLoading =
-    !authReady || locLoading || (uid ? !visLoaded : false) || !center;
-
+  const stillLoading = !authReady || locLoading || (uid ? !visLoaded : false) || !center;
   if (stillLoading || !center) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -100,22 +96,37 @@ export default function MapTab() {
   const effectiveRadius = isLoggedIn ? radiusMeters : null;
   const showCircle = effectiveVisible && effectiveRadius != null;
 
-  // filter others by *my* visibility radius (if I have one; worldwide shows all)
-  const markers = (others || []).filter((u) => {
-    if (!u.location?.lat || !u.location?.lng) return false;
-    if (!effectiveVisible) return false; // if I'm invisible, we can choose to show none
-    if (effectiveRadius == null) return true; // worldwide: show all visible users
-    const d = haversineMeters(center, { lat: u.location.lat, lng: u.location.lng });
-    return d <= effectiveRadius;
-  }).map(u => ({
-    id: u.id,
-    lat: u.location!.lat,
-    lng: u.location!.lng,
-    title: u.displayName ?? "User",
-  }));
+  // Build markers: filter others by *my* visibility radius
+  const markers = (others || [])
+    .filter((u) => {
+      if (!u.location?.lat || !u.location?.lng) return false;
+      if (!effectiveVisible) return false;
+      if (effectiveRadius == null) return true; // worldwide shows all
+      const d = haversineMeters(center, { lat: u.location.lat, lng: u.location.lng });
+      return d <= effectiveRadius;
+    })
+    .map(u => ({
+      id: u.id,
+      lat: u.location!.lat,
+      lng: u.location!.lng,
+      title: u.displayName ?? "User",
+      status: u.status ?? "Available", // <-- used by hover/panel
+    }));
 
   const selfVisible = !!effectiveVisible;
 
+  function handleAction(action: "view" | "chat" | "edit", userId: string) {
+    if (action === "edit") {
+      console.log("edit my profile");
+      // router.push("/profile"); // when you add the route
+    } else if (action === "view") {
+      console.log("view profile:", userId);
+      // router.push(`/profile/${userId}`);
+    } else if (action === "chat") {
+      console.log("start chat with:", userId);
+      // router.push(`/chat/${userId}`);
+    }
+  }
   return (
     <View style={{ flex: 1 }}>
       <MapView
@@ -124,11 +135,12 @@ export default function MapTab() {
         showCircle={showCircle}
         radiusMeters={effectiveRadius ?? undefined}
         markers={markers}
-        selfVisible={selfVisible}
+        selfVisible={!!effectiveVisible}
         onMarkerPress={(id) => {
-          // later: router.push(`/chat/${id}`)
-          console.log("Pressed user:", id);
+          if (id === "me") handleAction("edit", id);   // self -> edit
+          else handleAction("view", id);               // others -> view
         }}
+        onMarkerAction={handleAction} // web/native popups call this
       />
       <Text style={{ textAlign: "center", padding: 8, color: "#6b7280" }}>
         {effectiveVisible
@@ -140,6 +152,7 @@ export default function MapTab() {
     </View>
   );
 }
+
 
 
 

@@ -20,26 +20,23 @@ export function useOnboardingGuard() {
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       console.log("[guard] auth changed. user?", !!u, "path:", pathname);
-
       if (!u) {
         if (pathname !== "/login") router.replace("/login");
         setReady(true);
         return;
       }
-
       const offDoc = db.collection("users").doc(u.uid).onSnapshot((snap: any) => {
         const d = snap?.data?.();
-        const complete = !!d?.profileComplete;
+        const complete=!!d?.profileComplete;
         console.log("[guard] user doc:", d, "complete?", complete);
 
-        if (!complete) {
+        if(!complete) {
           if (pathname !== "/setup") router.replace("/setup");
         } else {
-          if (pathname === "/login" || pathname === "/setup" || pathname === "/") {
+          if(pathname === "/login" || pathname === "/setup" || pathname === "/") {
             router.replace("/(tabs)/map");
           }
         }
-
         setReady(true);
         offDoc?.(); // stop after first snapshot
       }, (err: any) => {
@@ -65,7 +62,7 @@ export default function RootLayout() {
   return (
     <PaperProvider>
       <AuthProvider>
-        <Slot />
+        <Slot/>
       </AuthProvider>
     </PaperProvider>
   );

@@ -8,7 +8,8 @@ import { onUserVisibility, saveSelfLocation } from "../../src/services/userSetti
 import { onAuthStateChanged, User } from "firebase/auth";
 import { onVisibleUsers, PublicUser } from "../../src/services/visibleUsers";
 import { haversineMeters } from "../../src/features/map/distance";
-
+import { ensureChat } from "../../src/services/chats";
+import { router } from "expo-router";
 type Center = { lat: number; lng: number };
 
 export default function MapTab() {
@@ -116,17 +117,23 @@ export default function MapTab() {
   const selfVisible = !!effectiveVisible;
 
   function handleAction(action: "view" | "chat" | "edit", userId: string) {
-    if (action === "edit") {
-      console.log("edit my profile");
-      // router.push("/profile"); // when you add the route
-    } else if (action === "view") {
+    if (action === "view") {
+      // later: router.push(`/profile/${userId}`)
       console.log("view profile:", userId);
-      // router.push(`/profile/${userId}`);
-    } else if (action === "chat") {
-      console.log("start chat with:", userId);
-      // router.push(`/chat/${userId}`);
+      return;
     }
-  }
+    if (action === "edit" && userId === "me") {
+      router.push("/profile"); // or /setup if you want to reuse that editor
+      return;
+    }
+    if (action === "chat") {
+      const me = auth.currentUser?.uid;
+      if (!me) return router.replace("/login");
+      ensureChat(me, userId)
+        .then(() => router.replace("/(tabs)/chat"))
+        .catch((e) => console.warn("ensureChat failed:", e?.message ?? e));
+    }
+  }  
   return (
     <View style={{ flex: 1 }}>
       <MapView

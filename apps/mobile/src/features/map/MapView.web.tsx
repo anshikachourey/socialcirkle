@@ -5,7 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { STYLE_URL, assertMapKey } from "./config";
 import { makeCircleGeoJSON } from "./geo";
 
-type WMarker = { id: string; lat: number; lng: number; title?: string; status?: string };
+type WMarker = { id: string; lat: number; lng: number; title?: string; status?: string; relationship?: "pending" | "accepted" | "blocked" | null; };
 
 type Props = {
   center: { lat: number; lng: number };
@@ -14,7 +14,7 @@ type Props = {
   showCircle?: boolean;
   markers?: WMarker[];
   onMarkerPress?: (id: string) => void;
-  onMarkerAction?: (action: "view" | "chat" | "edit", id: string) => void;
+  onMarkerAction?: (action: "view" | "chat" | "edit" | "request", id: string) => void;
   selfVisible?: boolean;
 };
 
@@ -76,7 +76,8 @@ export default function MapView({
       id: string,
       title?: string,
       status?: string,
-      isSelf: boolean = false
+      isSelf: boolean = false,
+      relationship?: "pending" | "accepted" | "blocked" | null
     ) => {
       const div = document.createElement("div");
       div.style.padding = "10px 12px";
@@ -85,39 +86,70 @@ export default function MapView({
       div.style.borderRadius = "10px";
       div.style.boxShadow = "0 8px 16px rgba(0,0,0,0.12)";
       div.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial";
-
-      const buttons = isSelf
-        ? `<div style="display:flex;gap:8px;">
-             <button data-action="edit" data-id="${id}"
-               style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
-               Edit profile
-             </button>
-           </div>`
-        : `<div style="display:flex;gap:8px;">
-             <button data-action="view" data-id="${id}"
-               style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
-               View profile
-             </button>
-             <button data-action="chat" data-id="${id}"
-               style="padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#111827;font-weight:600;cursor:pointer;">
-               Start chat
-             </button>
-           </div>`;
-
+    
+      let buttons = "";
+      if (isSelf) {
+        buttons = `
+          <div style="display:flex;gap:8px;">
+            <button data-action="edit" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
+              Edit profile
+            </button>
+          </div>`;
+      } else if (relationship === "accepted") {
+        buttons = `
+          <div style="display:flex;gap:8px;">
+            <button data-action="view" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
+              View profile
+            </button>
+            <button data-action="chat" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#111827;font-weight:600;cursor:pointer;">
+              Chat
+            </button>
+          </div>`;
+      } else if (relationship === "pending") {
+        buttons = `
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button disabled
+              style="padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;font-weight:600;">
+              Requested
+            </button>
+            <button data-action="view" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
+              View profile
+            </button>
+          </div>`;
+      } else {
+        buttons = `
+          <div style="display:flex;gap:8px;">
+            <button data-action="view" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #111827;background:#111827;color:white;font-weight:600;cursor:pointer;">
+              View profile
+            </button>
+            <button data-action="request" data-id="${id}"
+              style="padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#111827;font-weight:600;cursor:pointer;">
+              Request chat
+            </button>
+          </div>`;
+      }
+    
       div.innerHTML = `
         <div style="font-weight:700;font-size:14px;color:#111827;">${title ?? "User"}</div>
         <div style="font-size:12px;color:#6b7280;margin:4px 0 10px;">${status ?? "Available"}</div>
         ${buttons}
       `;
-
+    
       div.addEventListener("click", (e) => {
         const t = e.target as HTMLElement;
-        const action = t.getAttribute("data-action") as "view" | "chat" | "edit" | null;
+        const action = t.getAttribute("data-action") as "view" | "chat" | "edit" | "request" | null;
         const userId = t.getAttribute("data-id");
         if (action && userId) onMarkerAction?.(action, userId);
       });
+    
       return div;
     };
+    
 
     // --- SELF marker (red if visible, gray if hidden) ---
     const meEl = document.createElement("div");
@@ -144,7 +176,6 @@ export default function MapView({
     // ✅ Only ONE click handler for self → shows Edit profile
     meEl.addEventListener("click", (e) => {
       e.stopPropagation();
-      onMarkerPress?.("me");
       const p = new maplibregl.Popup({ offset: 14, closeButton: true, closeOnClick: false })
         .setDOMContent(makeActionHTML("me", selfTitle, selfStatus, /* isSelf */ true))
         .setLngLat([center.lng, center.lat]);
@@ -196,7 +227,7 @@ export default function MapView({
         e.stopPropagation();
         onMarkerPress?.(m.id);
         const p = new maplibregl.Popup({ offset: 14, closeButton: true, closeOnClick: false })
-          .setDOMContent(makeActionHTML(m.id, m.title, m.status, /* isSelf */ false))
+        .setDOMContent(makeActionHTML(m.id, m.title, m.status, /* isSelf */ false, m.relationship))
           .setLngLat([m.lng, m.lat]);
         openPopup(p);
       });

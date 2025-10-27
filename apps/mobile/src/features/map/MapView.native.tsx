@@ -5,7 +5,7 @@ import MapLibreGL from "react-native-maplibre-gl";
 import { STYLE_URL, assertMapKey } from "./config";
 import { makeCircleGeoJSON } from "./geo";
 
-type NMarker = { id: string; lat: number; lng: number; title?: string; status?: string };
+type NMarker = { id: string; lat: number; lng: number; title?: string; status?: string; relationship?: "pending" | "accepted" | "blocked" | null; };
 
 type Props = {
   center: { lat: number; lng: number };
@@ -14,7 +14,7 @@ type Props = {
   showCircle?: boolean;
   markers?: NMarker[];
   onMarkerPress?: (id: string) => void;
-  onMarkerAction?: (action: "view" | "chat" | "edit", id: string) => void;
+  onMarkerAction?: (action: "view" | "chat" | "edit" | "request", id: string) => void;
   selfVisible?: boolean;
 };
 
@@ -108,7 +108,7 @@ export default function MapView({
     <View style={{ height: 8 }} />
 
     {selected.id === "me" ? (
-      // 👇 Self: only “Edit profile”
+      // Self: only “Edit profile”
       <View style={styles.row}>
         <Pressable
           onPress={() => onMarkerAction?.("edit", selected.id)}
@@ -117,8 +117,8 @@ export default function MapView({
           <Text style={[styles.btnT, { color: "white" }]}>Edit profile</Text>
         </Pressable>
       </View>
-    ) : (
-      // 👇 Others: View + Chat
+    ) : selected.relationship === "accepted" ? (
+      // Friends: View + Chat
       <View style={styles.row}>
         <Pressable
           onPress={() => onMarkerAction?.("view", selected.id)}
@@ -130,15 +130,49 @@ export default function MapView({
           onPress={() => onMarkerAction?.("chat", selected.id)}
           style={[styles.btn, { borderWidth: 1, borderColor: "#e5e7eb" }]}
         >
-          <Text style={[styles.btnT, { color: "#111827" }]}>Start chat</Text>
+          <Text style={[styles.btnT, { color: "#111827" }]}>Chat</Text>
         </Pressable>
       </View>
-    )}
-    <Pressable style={styles.close} onPress={() => setSelected(null)}>
-      <Text style={{ color: "#6b7280" }}>Close</Text>
-    </Pressable>
-  </View>
-)}
+    ) : selected.relationship === "pending" ? (
+      // Pending: Requested (disabled) + View
+        <View style={styles.row}>
+          <Pressable
+            disabled
+            style={[styles.btn, { borderWidth: 1, borderColor: "#e5e7eb", opacity: 0.6 }]}
+          >
+            <Text style={[styles.btnT, { color: "#6b7280" }]}>Requested</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onMarkerAction?.("view", selected.id)}
+            style={[styles.btn, { backgroundColor: "#111827" }]}
+          >
+            <Text style={[styles.btnT, { color: "white" }]}>View profile</Text>
+          </Pressable>
+        </View>
+      ) : (
+        // Not related: View + Request chat
+        <View style={styles.row}>
+          <Pressable
+            onPress={() => onMarkerAction?.("view", selected.id)}
+            style={[styles.btn, { backgroundColor: "#111827" }]}
+          >
+            <Text style={[styles.btnT, { color: "white" }]}>View profile</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onMarkerAction?.("request", selected.id)}
+            style={[styles.btn, { borderWidth: 1, borderColor: "#e5e7eb" }]}
+          >
+            <Text style={[styles.btnT, { color: "#111827" }]}>Request chat</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <Pressable style={styles.close} onPress={() => setSelected(null)}>
+        <Text style={{ color: "#6b7280" }}>Close</Text>
+      </Pressable>
+    </View>
+  )}
+
 
     </View>
   );

@@ -1,6 +1,6 @@
 // src/services/chats.ts
 import { db, firestore } from "../lib/firebase";
-
+import { api } from "../lib/api";
 export type ChatDoc = {
   id: string;
   members: string[];
@@ -25,25 +25,17 @@ export function onMyChats(uid: string, cb: (rows: ChatDoc[]) => void, onError?: 
 }
 
 // used when you tap “Start chat” on the map
-export async function ensureChat(a: string, b: string) {
-  if (a === b) return; // don't create self-chat
-  const ids = [a, b].sort(); // normalized two-member room
-  const key = ids.join("_");
-  const ref = db.collection("chats").doc(key);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    await ref.set({
-      members: ids,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-      lastMessage: null,
-    });
-  } else {
-    await ref.set(
-      { updatedAt: firestore.FieldValue.serverTimestamp() },
-      { merge: true }
-    );
+export async function ensureChat(uidA: string, uidB: string) {
+    const members = [uidA, uidB].sort() as [string, string];
+    const chatId = `${members[0]}__${members[1]}`;
+    const ref = db.collection("chats").doc(chatId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set({
+        members,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    return chatId;
   }
-  return key;
-}
 

@@ -104,7 +104,7 @@ export default function MapTab() {
   const effectiveRadius = isLoggedIn ? radiusMeters : null;
   const showCircle = effectiveVisible && effectiveRadius != null;
 
-  // Build markers: filter others by *my* visibility radius
+  // Build markers and filter other users by *my* visibility radius
   const markers = (others || [])
     .filter((u) => {
       if (!u.location?.lat || !u.location?.lng) return false;
@@ -159,7 +159,7 @@ export default function MapTab() {
         markers={markers as any}
         selfVisible={!!effectiveVisible}
         onMarkerPress={(id) => {
-          if (id !== "me") handleAction("view", id); // only others
+          if (id !== "me") handleAction("view", id); // only view for others
         }}
         onMarkerAction={handleAction}
       />

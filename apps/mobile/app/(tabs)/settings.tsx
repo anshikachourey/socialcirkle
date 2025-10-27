@@ -67,7 +67,7 @@ export default function Settings() {
       displayName: displayName.trim() || null,
       username: username.trim() || null,
       bio: bio.trim() || null,
-      photoURL: photoURL.trim() || null, // simple URL field for now
+      photoURL: photoURL.trim() || null, // simple URL field which needs to be replaced with a way to upload photo
       visibility: { visible, radiusMeters: visible ? r : null },
       profileComplete: true,
       updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),
@@ -135,19 +135,49 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  center:{flex:1,alignItems:"center",justifyContent:"center"},
-  hint:{marginTop:8,color:"#6b7280"},
-  c: { flex: 1, padding: 20, gap: 12 },
-  h: { fontSize: 22, fontWeight: "700", textAlign: "center", marginBottom: 8 },
-  l: { fontSize: 14, color: "#374151" },
-  in: { borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
-  rowT: { fontSize: 16, fontWeight: "600" },
-  pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  pill: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: "#d1d5db" },
-  pillA: { backgroundColor: "#111827", borderColor: "#111827" },
-  pillT: { color: "#111827", fontWeight: "600" },
-  pillTA: { color: "#fff" },
-  btn: { backgroundColor: "#111827", borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 12 },
-  btnT: { color: "#fff", fontWeight: "700" },
+  center:{
+    flex:1,alignItems:"center",justifyContent:"center"
+    },
+  hint:{
+    marginTop:8,color:"#6b7280"
+    },
+  c: {
+    flex: 1, padding: 20, gap: 12 
+    },
+  h: {
+    fontSize: 22, fontWeight: "700", textAlign: "center", marginBottom: 8 
+    },
+  l: { 
+    fontSize: 14, color: "#374151" 
+    },
+  in: { 
+    borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 
+    },
+  row: { 
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 
+    },
+  rowT: { 
+    fontSize: 16, fontWeight: "600" 
+    },
+  pills: { 
+    flexDirection: "row", flexWrap: "wrap", gap: 8 
+    },
+  pill: { 
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: "#d1d5db" 
+    },
+  pillA: { 
+    backgroundColor: "#111827", borderColor: "#111827" 
+    },
+  pillT: { 
+    color: "#111827", fontWeight: "600" 
+    },
+  pillTA: { 
+    color: "#fff" 
+    },
+  btn: { 
+    backgroundColor: "#111827", borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 12 
+    },
+  btnT: { 
+    color: "#fff", fontWeight: "700" 
+    },
 });

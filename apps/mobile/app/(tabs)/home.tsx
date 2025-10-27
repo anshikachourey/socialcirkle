@@ -5,14 +5,14 @@ import { auth, db, firestore, signOutUser } from "@/lib/firebase";
 
 export default function Home() {
   async function out() {
-    await signOutUser();                                   // ✅ RNFirebase
+    await signOutUser();                                  
     router.replace("/login");
   }
 
   async function createCirkle() {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-    await db.collection("cirkles").add({                     // ✅ RNFirebase Firestore
+    await db.collection("cirkles").add({                    
       ownerId: uid,
       title: "Pop-up Cirkle",
       status: "open",

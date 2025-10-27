@@ -1,23 +1,20 @@
 // app/(tabs)/chat.tsx
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, FlatList, Pressable, StyleSheet } from "react-native";
-import { auth } from "../../src/lib/firebase";                 // ✅ relative path
-import { onMyChats, ChatDoc } from "../../src/services/chats"; // ✅ new service
+import { auth } from "../../src/lib/firebase";                 // This is the relative path
+import { onMyChats, ChatDoc } from "../../src/services/chats"; // new service for chats
 
 export default function ChatTab() {
   const uid = auth.currentUser?.uid ?? null;
-
   const [loading, setLoading] = useState(true);
   const [chats, setChats] = useState<ChatDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Not logged in → show message, not spinner
+    // If user not logged in, show message, not loading spinner
     if (!uid) { setLoading(false); return; }
-
-    // Safety timeout so we never “hang”
+    // Safety timeout to avoid hangs
     const t = setTimeout(() => setLoading(false), 4000);
-
     const off = onMyChats(
       uid,
       (rows) => {
@@ -69,7 +66,6 @@ export default function ChatTab() {
       </View>
     );
   }
-
   return (
     <FlatList
       data={chats}
@@ -89,7 +85,6 @@ export default function ChatTab() {
     />
   );
 }
-
 const S = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   h: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 6 },

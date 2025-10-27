@@ -6,7 +6,6 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { useAuth } from "@/lib/auth-context";
 import { Pressable } from "react-native";
 import { Menu } from "react-native-paper";
-
 function RouteGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -16,7 +15,6 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     if (loading) return;
     const first = segments[0];  // "(tabs)"
     const second = segments[1]; // "login" | "home" | "map" | "profile" | ...
-
     const inTabs = first === "(tabs)";
     const inAuth = inTabs && second === "login";
 
@@ -29,11 +27,9 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
 function ProfileHeaderMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-
   return (
     <Menu
       visible={open}
@@ -55,7 +51,6 @@ function ProfileHeaderMenu() {
     </Menu>
   );
 }
-
 export default function TabsLayout() {
   return (
     <RouteGuard>
@@ -115,8 +110,7 @@ export default function TabsLayout() {
             href: null, // hide from tab bar
           }}
         />
-
-        {/* Hidden routes used by the profile menu */}
+        {/* These are the hidden routes used by the profile menu */}
         <Tabs.Screen name="settings" options={{ title: "Settings", href: null }} />
         <Tabs.Screen name="friends" options={{ title: "My friends", href: null }} />
         <Tabs.Screen name="blocked" options={{ title: "Blocked users", href: null }} />

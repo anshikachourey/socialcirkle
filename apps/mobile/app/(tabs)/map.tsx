@@ -9,6 +9,8 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { onVisibleUsers, PublicUser } from "../../src/services/visibleUsers";
 import { haversineMeters } from "../../src/features/map/distance";
 import { ensureChat } from "../../src/services/chats";
+import { onMyRelationships, requestChat } from "../../src/services/relationships";
+
 import { router } from "expo-router";
 type Center = { lat: number; lng: number };
 
@@ -28,6 +30,7 @@ export default function MapTab() {
 
   // other users
   const [others, setOthers] = useState<PublicUser[]>([]);
+  const [rels, setRels] = useState<Record<string, "pending" | "accepted" | "blocked">>({});
 
   const wroteOnceRef = useRef(false);
 
@@ -39,7 +42,11 @@ export default function MapTab() {
     });
     return off;
   }, []);
-
+  useEffect(() => {
+    if (!uid) return;
+    const off = onMyRelationships(setRels);
+    return off;        
+  }, [uid]);
   // subscribe to my visibility
   useEffect(() => {
     setVisLoaded(false);
@@ -112,20 +119,28 @@ export default function MapTab() {
       lng: u.location!.lng,
       title: u.displayName ?? "User",
       status: u.status ?? "Available", // <-- used by hover/panel
+      relationship: rels[u.id] ?? null,
     }));
 
   const selfVisible = !!effectiveVisible;
 
-  function handleAction(action: "view" | "chat" | "edit", userId: string) {
-    if (action === "view") {
-      // later: router.push(`/profile/${userId}`)
-      console.log("view profile:", userId);
-      return;
-    }
+  function handleAction(action: "view" | "chat" | "edit" | "request", userId: string) {
     if (action === "edit" && userId === "me") {
-      router.push("/profile"); // or /setup if you want to reuse that editor
+      router.push("/profile");
       return;
     }
+  
+    if (action === "view") {
+      console.log("view profile:", userId);
+      // router.push(`/profile/${userId}`) // future
+      return;
+    }
+  
+    if (action === "request") {
+      requestChat(userId).catch((e) => console.warn("requestChat failed:", e?.message ?? e));
+      return;
+    }
+  
     if (action === "chat") {
       const me = auth.currentUser?.uid;
       if (!me) return router.replace("/login");
@@ -133,7 +148,7 @@ export default function MapTab() {
         .then(() => router.replace("/(tabs)/chat"))
         .catch((e) => console.warn("ensureChat failed:", e?.message ?? e));
     }
-  }  
+  }   
   return (
     <View style={{ flex: 1 }}>
       <MapView
@@ -141,13 +156,12 @@ export default function MapTab() {
         zoom={13}
         showCircle={showCircle}
         radiusMeters={effectiveRadius ?? undefined}
-        markers={markers}
+        markers={markers as any}
         selfVisible={!!effectiveVisible}
         onMarkerPress={(id) => {
-          if (id === "me") handleAction("edit", id);   // self -> edit
-          else handleAction("view", id);               // others -> view
+          if (id !== "me") handleAction("view", id); // only others
         }}
-        onMarkerAction={handleAction} // web/native popups call this
+        onMarkerAction={handleAction}
       />
       <Text style={{ textAlign: "center", padding: 8, color: "#6b7280" }}>
         {effectiveVisible

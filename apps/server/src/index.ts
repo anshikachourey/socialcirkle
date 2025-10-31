@@ -18,7 +18,7 @@ app.use(cors({ origin: allowed.length ? allowed : true }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// require Firebase ID token for API routes
+//requires Firebase ID token for API routes
 app.use("/api", authMiddleware);
 app.use("/api/relationships", relationships);
 app.use("/api/chats", chats);

@@ -58,7 +58,7 @@ r.get("/:id/messages", async (req, res) => {
 });
 
 // send message
-// POST /api/chats/:id/messages  { text }
+// POST /api/chats/:id/messages 
 r.post("/:id/messages", async (req, res) => {
   const uid = (req as any).uid as string;
   const id = req.params.id;

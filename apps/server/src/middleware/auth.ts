@@ -10,7 +10,6 @@ if (!admin.apps.length) {
     } as any),
   });
 }
-
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const hdr = req.headers.authorization || "";
   const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;

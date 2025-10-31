@@ -67,7 +67,7 @@ export default function Settings() {
       displayName: displayName.trim() || null,
       username: username.trim() || null,
       bio: bio.trim() || null,
-      photoURL: photoURL.trim() || null, // simple URL field which needs to be replaced with a way to upload photo
+      photoURL: photoURL.trim() || null, // simple URL field which needs to be replaced with a way to upload a profile photo
       visibility: { visible, radiusMeters: visible ? r : null },
       profileComplete: true,
       updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),

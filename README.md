@@ -1,4 +1,4 @@
-# 🌐 SocialCirkle 🌐
+# 🌐 SocialCirkle 
 
 **SocialCirkle** is a real-time, location-based social networking app that enables users to discover and connect with others nearby in public spaces such as campuses, cafes, and events. By combining live geolocation, group “Cirkles,” and instant messaging, the app fosters spontaneous, safe, and shared social interactions around common interests.  
 
@@ -10,8 +10,8 @@
 - **Cirkles / Events:** Create or join public/private groups with interest tags and optional pinned locations.  
 - **Instant Messaging:** One-on-one and group chats within active Cirkles.  
 - **Privacy & Safety:** Radius limits, location toggle, reporting, and blocking for user safety.  
-- **Push Notifications (Planned):** Real-time updates with Firebase Cloud Messaging.  
-- **UI Enhancements (Planned):** Dark mode, onboarding screens, and event suggestions.  
+- **Push Notifications:** Real-time updates with Firebase Cloud Messaging.  
+- **UI Enhancements:** Dark mode, onboarding screens, and event suggestions.  
 
 ---
 

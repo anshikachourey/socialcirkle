@@ -1,4 +1,4 @@
-# 🌐 SocialCirkle 
+# 🌐 SocialCirkle 🌐
 
 **SocialCirkle** is a real-time, location-based social networking app that enables users to discover and connect with others nearby in public spaces such as campuses, cafes, and events. By combining live geolocation, group “Cirkles,” and instant messaging, the app fosters spontaneous, safe, and shared social interactions around common interests.  
 

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 export default function NewGroup() {
   const router = useRouter();
   const [name, setName] = useState('');
-  const [raw, setRaw] = useState(''); // comma-separated uids for now
+  const [raw, setRaw] = useState(''); // comma-separated uids
 
   return (
     <View className="p-4 gap-3">
@@ -26,7 +26,7 @@ export default function NewGroup() {
       <TouchableOpacity
         className="bg-blue-600 rounded-xl px-4 py-3 mt-4"
         onPress={async () => {
-          const memberUids = raw.split(',').map(s => s.trim()).filter(Boolean);
+          const memberUids = raw.split(',').map((s) => s.trim()).filter(Boolean);
           try {
             const chatId = await createGroup(name, memberUids);
             router.replace(`/chat/${chatId}`);
@@ -39,3 +39,4 @@ export default function NewGroup() {
     </View>
   );
 }
+

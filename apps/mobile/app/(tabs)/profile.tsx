@@ -3,19 +3,16 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, Pressable, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
 import { auth, db } from "../../src/lib/firebase";
-
 type UserDoc = {
   displayName?: string | null;
   username?: string | null;
   bio?: string | null;
   photoURL?: string | null;
 };
-
 export default function Profile() {
   const uid = auth.currentUser?.uid;
   const [data, setData] = useState<UserDoc | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let off: any;
     (async () => {
@@ -31,17 +28,14 @@ export default function Profile() {
     })();
     return () => off?.();
   }, [uid]);
-
   if (loading) {
     return (
       <View style={s.center}><ActivityIndicator /><Text style={s.hint}>Loading profile…</Text></View>
     );
   }
-
   const name = data?.displayName || "Your name";
   const username = data?.username ? `@${data.username}` : "";
   const bio = data?.bio || "Add a short bio that others will see.";
-
   return (
     <View style={s.c}>
       <Image
@@ -51,14 +45,12 @@ export default function Profile() {
       <Text style={s.name}>{name}</Text>
       {!!username && <Text style={s.username}>{username}</Text>}
       <Text style={s.bio}>{bio}</Text>
-
       <Pressable style={s.btn} onPress={() => router.push("/(tabs)/settings")}>
         <Text style={s.btnT}>Edit Profile</Text>
       </Pressable>
     </View>
   );
 }
-
 const s = StyleSheet.create({
   c: { flex: 1, alignItems: "center", padding: 24, gap: 8, justifyContent: "center" },
   center: { flex:1, alignItems:"center", justifyContent:"center" },

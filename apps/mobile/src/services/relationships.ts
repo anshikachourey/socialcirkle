@@ -1,64 +1,70 @@
-// src/services/relationships.ts
-import { api } from "../lib/api";
-import { db, auth } from "../lib/firebase";
+import { api } from '../lib/api';
 
-export type RelState = "pending" | "accepted" | "blocked";
-
-export type Relationship = {
-  users: [string, string];
-  status: RelState;
-  requestedBy?: string | null;
-  updatedAt?: any;
+export type RelationshipRequest = {
+  id: string;
+  fromUid: string;
+  toUid: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
 };
 
-// --- Write actions: go through backend API ---
+export type RelationshipRow = {
+  uid: string;
+  status: 'friend' | 'requested' | 'incoming' | 'blocked';
+  displayName?: string | null;
+};
 
-export async function requestChat(otherId: string) {
-  // POST /api/relationships/:id/request
-  await api(`/api/relationships/${otherId}/request`, { method: "POST" });
-}
-
-export async function acceptRequest(otherId: string) {
-  // POST /api/relationships/:id/accept
-  await api(`/api/relationships/${otherId}/accept`, { method: "POST" });
-}
-
-export async function declineRequest(otherId: string) {
-  // POST /api/relationships/:id/decline
-  await api(`/api/relationships/${otherId}/decline`, { method: "POST" });
-}
-
-export async function blockUser(otherId: string) {
-  await api(`/api/relationships/${otherId}/block`, { method: "POST" });
-}
-
-export async function unblockUser(otherId: string) {
-  await api(`/api/relationships/${otherId}/unblock`, { method: "POST" });
-}
-
-// --- Read/subscription: keep using Firestore for now ---
-
-/**
- * Subscribe to my relationships and return a map of { [otherUid]: "pending" | "accepted" | "blocked" }.
- * Assumes a `relationships` collection with docs that have `users: [uidA, uidB]` (sorted) and `status`.
- */
-export function onMyRelationships(
-  cb: (rels: Record<string, RelState>) => void
+export async function listIncomingRequests(
+  status: 'pending' | 'accepted' | 'declined' = 'pending'
 ) {
-  const me = auth.currentUser?.uid;
-  if (!me) return () => {};
-
-  return db
-    .collection("relationships")
-    .where("users", "array-contains", me)
-    .onSnapshot((qs: any) => {
-      const map: Record<string, RelState> = {};
-      qs.forEach((d: any) => {
-        const r = d.data?.() as Relationship;
-        if (!r?.users?.length) return;
-        const other = r.users[0] === me ? r.users[1] : r.users[0];
-        map[other] = r.status;
-      });
-      cb(map);
-    });
+  const res = await api(`/api/relationships/requests?status=${status}`);
+  if (!res.ok) throw new Error('Failed to load requests');
+  const data = await res.json();
+  return data.items as RelationshipRequest[];
 }
+
+export async function acceptRequest(requestId: string) {
+  const res = await api(`/api/relationships/requests/${requestId}/accept`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to accept request');
+  const data = await res.json();
+  return data.chatId as string;
+}
+
+export async function declineRequest(requestId: string) {
+  const res = await api(`/api/relationships/requests/${requestId}/decline`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to decline request');
+}
+
+export function onMyRelationships(cb: (rows: RelationshipRow[]) => void) {
+  let stopped = false;
+
+  async function loadDev() {
+    try {
+      const res = await api('/api/dev/demo-users?n=8');
+      if (!res.ok) throw new Error('dev users failed');
+      const data = await res.json() as { items: string[] };
+      const items = (data.items ?? []).slice(0, 8);
+      const rows: RelationshipRow[] = items.map((uid, i) => {
+        let status: RelationshipRow['status'] = 'friend';
+        if (i >= 4 && i < 6) status = 'requested';
+        if (i >= 6) status = 'incoming';
+        return { uid, status, displayName: uid.replace('demo_', '') };
+      });
+      if (!stopped) cb(rows);
+    } catch {
+      if (!stopped) cb([]);
+    }
+  }
+
+  async function loadProd() { cb([]); }
+
+  if (__DEV__) {
+    loadDev();
+    const t = setInterval(loadDev, 5000);
+    return () => { stopped = true; clearInterval(t); };
+  } else {
+    loadProd();
+    return () => { stopped = true; };
+  }
+}
+

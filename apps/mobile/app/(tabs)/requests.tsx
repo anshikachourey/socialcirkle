@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
-import { acceptChatRequest, declineChatRequest, listIncomingRequests, ChatRequest } from '../../src/services/chats';
 import { useRouter } from 'expo-router';
+import {
+  listIncomingRequests,
+  acceptRequest,
+  declineRequest,
+  type RelationshipRequest
+} from '../../src/services/relationships';
 
 export default function RequestsTab() {
   const router = useRouter();
-  const [items, setItems] = useState<ChatRequest[]>([]);
+  const [items, setItems] = useState<RelationshipRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function load() {
@@ -17,9 +22,7 @@ export default function RequestsTab() {
       setLoading(false);
     }
   }
-
   useEffect(() => { load(); }, []);
-
   return (
     <FlatList
       data={items}
@@ -33,16 +36,16 @@ export default function RequestsTab() {
             <TouchableOpacity
               className="bg-green-600 px-4 py-2 rounded-xl"
               onPress={async () => {
-                const chatId = await acceptChatRequest(item.id);
+                const chatId = await acceptRequest(item.id);
                 await load();
-                router.push(`/chat/${chatId}`);
+                if (chatId) router.push(`/chat/${chatId}`);
               }}>
               <Text className="text-white">Accept</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="bg-red-600 px-4 py-2 rounded-xl"
               onPress={async () => {
-                await declineChatRequest(item.id);
+                await declineRequest(item.id);
                 await load();
               }}>
               <Text className="text-white">Decline</Text>

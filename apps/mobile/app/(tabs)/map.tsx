@@ -81,7 +81,7 @@ export default function MapTab() {
   }, [allUsers, user?.uid]);
 
   const selfVisible = !!meDoc?.visibility?.enabled;
-  const radiusMeters = meDoc?.visibility?.radiusMeters ?? 50 * 1609.344;
+  const radiusMeters = meDoc?.visibility?.radiusMeters ?? 10 * 1609.344;
 
   // Filter users who should appear:
   // - must have location
@@ -118,16 +118,18 @@ export default function MapTab() {
       <View style={{ padding: 12, backgroundColor: "#faf9f6" }}>
         <Text style={{ fontWeight: "700", fontSize: 18, color: "#111827" }}>Map</Text>
         <Text style={{ color: "#6b7280" }}>
-          {selfVisible ? "Visible" : "Hidden"} • Radius ~{Math.round(milesFromMeters(radiusMeters))} miles
-          {error ? ` • Location error: ${error}` : ""}
-        </Text>
+        {selfVisible
+          ? `Visible • Radius ~${Math.round(milesFromMeters(radiusMeters))} miles`
+          : "Hidden • Location sharing is off"}
+        {error ? ` • Location error: ${error}` : ""}
+      </Text>
       </View>
 
       <MapView
         center={myCenter}
         zoom={13}
-        showCircle
-        radiusMeters={radiusMeters}
+        showCircle={selfVisible}      
+        radiusMeters={selfVisible ? radiusMeters : 0} 
         markers={markers}
         selfVisible={selfVisible}
         onMarkerPress={() => {}}

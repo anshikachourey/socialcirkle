@@ -1,4 +1,4 @@
-// src/lib/firebase.web.ts
+// src/lib/firebaseImpl.web.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
@@ -22,6 +22,10 @@ import {
   doc as fsDoc,
   query as fsQuery,
   where as fsWhere,
+  updateDoc,
+  deleteDoc,
+  orderBy as fsOrderBy,
+  limit as fsLimit,
 } from "firebase/firestore";
 
 // ⬇️ Put your Web App config here
@@ -44,15 +48,16 @@ setPersistence(auth, browserLocalPersistence).catch((e) => {
 
 const _db = getFirestore(app);
 
-// --- Adapter so web code can call RNFirebase-style APIs like db.collection(...).doc(...).get()
+// --- Adapters so web code can call RNFirebase-style APIs like db.collection(...).doc(...).get()
 function adaptQuerySnapshot(qs: any) {
   return {
-    docs: qs.docs.map((d: any) => ({
+    docs: (qs?.docs ?? []).map((d: any) => ({
       id: d.id,
       data: () => d.data(),
     })),
   };
 }
+
 function adaptDocSnapshot(ds: any) {
   return {
     id: ds.id,
@@ -61,15 +66,37 @@ function adaptDocSnapshot(ds: any) {
   };
 }
 
+// Small query builder so you can chain where/orderBy/limit then onSnapshot
+function makeQueryApi(qref: any) {
+  return {
+    where: (field: string, op: any, value: any) => makeQueryApi(fsQuery(qref, fsWhere(field as any, op as any, value))),
+    orderBy: (field: string, dir: "asc" | "desc" = "asc") => makeQueryApi(fsQuery(qref, fsOrderBy(field as any, dir))),
+    limit: (n: number) => makeQueryApi(fsQuery(qref, fsLimit(n))),
+    onSnapshot: (cb: any, errCb?: any) =>
+      onSnapshot(
+        qref,
+        (qs) => cb(adaptQuerySnapshot(qs)),
+        (err) => errCb?.(err)
+      ),
+  };
+}
+
 export const db: any = {
   collection: (name: string) => {
     const cref = fsCollection(_db, name);
+
     return {
+      // Add a new doc with auto id
       add: (data: any) => addDoc(cref, data),
+
+      // Document API
       doc: (id: string) => {
         const dref = fsDoc(_db, name, id);
+
         return {
           set: (data: any, options?: any) => setDoc(dref, data, options),
+          update: (patch: any) => updateDoc(dref, patch),
+          delete: () => deleteDoc(dref),
           get: async () => adaptDocSnapshot(await getDoc(dref)),
           onSnapshot: (cb: any, errCb?: any) =>
             onSnapshot(
@@ -79,17 +106,13 @@ export const db: any = {
             ),
         };
       },
-      where: (field: string, op: any, value: any) => {
-        const qref = fsQuery(cref, fsWhere(field as any, op as any, value));
-        return {
-          onSnapshot: (cb: any, errCb?: any) =>
-            onSnapshot(
-              qref,
-              (qs) => cb(adaptQuerySnapshot(qs)),
-              (err) => errCb?.(err)
-            ),
-        };
-      },
+
+      // Query helpers (chainable)
+      where: (field: string, op: any, value: any) => makeQueryApi(fsQuery(cref, fsWhere(field as any, op as any, value))),
+      orderBy: (field: string, dir: "asc" | "desc" = "asc") => makeQueryApi(fsQuery(cref, fsOrderBy(field as any, dir))),
+      limit: (n: number) => makeQueryApi(fsQuery(cref, fsLimit(n))),
+
+      // Collection subscription
       onSnapshot: (cb: any, errCb?: any) =>
         onSnapshot(
           cref,
@@ -114,15 +137,18 @@ export type FirebaseAuthTypes = { User: import("firebase/auth").User };
 export function onAuthChanged(cb: (u: FirebaseAuthTypes["User"] | null) => void) {
   return webOnAuthChanged(auth, cb);
 }
+
 export async function signUpEmail(email: string, password: string, displayName?: string) {
   const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
   if (displayName) await updateProfile(cred.user, { displayName });
   return cred.user;
 }
+
 export async function signInEmail(email: string, password: string) {
   const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
   return cred.user;
 }
+
 export function signOutUser() {
   return signOut(auth);
 }

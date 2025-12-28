@@ -50,6 +50,17 @@ export default function MapView({
     return makeCircleGeoJSON(center, radiusMeters) as any;
   }, [showCircle, radiusMeters, center.lat, center.lng]);
 
+  // ---- helpers to prevent “popup on other world copy” ----
+  const wrapLngToNearestCopy = (map: maplibregl.Map, lng: number, lat: number) => {
+    // bring lng close to current map center (avoid picking a different wrapped world)
+    const mapCenterLng = map.getCenter().lng;
+    let outLng = lng;
+    while (Math.abs(outLng - mapCenterLng) > 180) {
+      outLng += outLng > mapCenterLng ? -360 : 360;
+    }
+    return [outLng, lat] as [number, number];
+  };
+
   // ---------- INIT MAP ONCE ----------
   useEffect(() => {
     if (!ref.current) return;
@@ -60,6 +71,8 @@ export default function MapView({
       style: STYLE_URL,
       center: [center.lng, center.lat],
       zoom,
+      // KEY FIX: don’t render duplicate worlds (prevents popup/marker wrap mismatch)
+      renderWorldCopies: false,
     });
 
     mapRef.current = map;
@@ -70,6 +83,10 @@ export default function MapView({
       offset: 12,
     });
 
+    // If your container size changes after mount, make MapLibre recalc projection
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(ref.current);
+
     map.on("click", () => {
       hoverPopupRef.current?.remove();
       if (clickPopupRef.current) {
@@ -79,6 +96,7 @@ export default function MapView({
     });
 
     return () => {
+      ro.disconnect();
       hoverPopupRef.current?.remove();
       if (clickPopupRef.current) clickPopupRef.current.remove();
       markerMapRef.current.forEach((m) => m.remove());
@@ -107,8 +125,8 @@ export default function MapView({
 
     const ensureLayers = () => {
       const src = map.getSource(srcId) as any;
+
       if (!circleGeo) {
-        // remove if exists
         if (map.getLayer(fillId)) map.removeLayer(fillId);
         if (map.getLayer(lineId)) map.removeLayer(lineId);
         if (map.getSource(srcId)) map.removeSource(srcId);
@@ -162,9 +180,11 @@ export default function MapView({
 
     if (clickPopupRef.current) clickPopupRef.current.remove();
 
+    const [wlng, wlat] = wrapLngToNearestCopy(map, lng, lat);
+
     const p = new maplibregl.Popup({ offset: 14, closeButton: true, closeOnClick: false })
       .setDOMContent(node)
-      .setLngLat([lng, lat])
+      .setLngLat([wlng, wlat])
       .addTo(map);
 
     clickPopupRef.current = p;
@@ -255,10 +275,8 @@ export default function MapView({
 
     const hoverPopup = hoverPopupRef.current;
 
-    // Build desired marker set (including "me")
     const desiredIds = new Set<string>(["me", ...markers.map((m) => m.id)]);
 
-    // Remove markers that no longer exist
     markerMapRef.current.forEach((mk, id) => {
       if (!desiredIds.has(id)) {
         mk.remove();
@@ -279,23 +297,22 @@ export default function MapView({
       markerMapRef.current.set("me", meMarker);
 
       meEl.addEventListener("mouseenter", () => {
-        hoverPopup
-          ?.setDOMContent(makeHoverHTML("You", selfVisible ? "Visible" : "Hidden"))
-          .setLngLat([center.lng, center.lat])
-          .addTo(map);
+        const ll = meMarker.getLngLat();
+        const [wlng, wlat] = wrapLngToNearestCopy(map, ll.lng, ll.lat);
+        hoverPopup?.setDOMContent(makeHoverHTML("You", selfVisible ? "Visible" : "Hidden")).setLngLat([wlng, wlat]).addTo(map);
       });
       meEl.addEventListener("mouseleave", () => hoverPopup?.remove());
 
       meEl.addEventListener("click", (e) => {
         e.stopPropagation();
         onMarkerPress?.("me");
-        openClickPopup(center.lng, center.lat, makeActionHTML("me", "You", selfVisible ? "Visible" : "Hidden", true));
+        const ll = meMarker.getLngLat();
+        openClickPopup(ll.lng, ll.lat, makeActionHTML("me", "You", selfVisible ? "Visible" : "Hidden", true));
       });
     } else {
       markerMapRef.current.get("me")!.setLngLat([center.lng, center.lat]);
     }
 
-    // Update self marker color
     const meEl = markerMapRef.current.get("me")?.getElement();
     if (meEl) (meEl as HTMLElement).style.background = selfVisible ? "#ef4444" : "#9ca3af";
 
@@ -315,14 +332,17 @@ export default function MapView({
         markerMapRef.current.set(m.id, mk);
 
         el.addEventListener("mouseenter", () => {
-          hoverPopup?.setDOMContent(makeHoverHTML(m.title, m.status)).setLngLat([m.lng, m.lat]).addTo(map);
+          const ll = mk.getLngLat();
+          const [wlng, wlat] = wrapLngToNearestCopy(map, ll.lng, ll.lat);
+          hoverPopup?.setDOMContent(makeHoverHTML(m.title, m.status)).setLngLat([wlng, wlat]).addTo(map);
         });
         el.addEventListener("mouseleave", () => hoverPopup?.remove());
 
         el.addEventListener("click", (e) => {
           e.stopPropagation();
           onMarkerPress?.(m.id);
-          openClickPopup(m.lng, m.lat, makeActionHTML(m.id, m.title, m.status, false, m.relationship));
+          const ll = mk.getLngLat();
+          openClickPopup(ll.lng, ll.lat, makeActionHTML(m.id, m.title, m.status, false, m.relationship));
         });
       } else {
         markerMapRef.current.get(m.id)!.setLngLat([m.lng, m.lat]);
@@ -330,6 +350,5 @@ export default function MapView({
     }
   }, [markers, center.lat, center.lng, selfVisible, onMarkerPress, onMarkerAction]);
 
-  return <div ref={ref} style={{ width: "100%", height: "100%" }} />;
+  return <div ref={ref} style={{ width: "100%", height: "100%", position: "relative" }} />;
 }
-

@@ -3,9 +3,9 @@ services:
     name: socialcirkle-server
     env: node
     plan: free
+    rootDir: apps/server
     buildCommand: npm ci && npx prisma generate && npm run build
     startCommand: node dist/index.js
-    rootDir: apps/server
     autoDeploy: true
     envVars:
       - key: DATABASE_URL

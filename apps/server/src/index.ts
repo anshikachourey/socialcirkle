@@ -1,27 +1,43 @@
-import "dotenv/config";
 import express from "express";
-import morgan from "morgan";
-import helmet from "helmet";
 import cors from "cors";
-import { authMiddleware } from "./middleware/auth.js";
-import relationships from "./routes/relationships.js";
-import chats from "./routes/chats.js";
+import { requireAuth } from "./middleware/auth.js";
+import chatsRouter from "./routes/chats.js";
+import relationshipsRouter from "./routes/relationships.js";
+
+// Optional dev-only routes (mounted only in non-prod)
+let devRouter: any = null;
+try {
+  devRouter = (await import("./routes/dev.js")).default;
+} catch {}
 
 const app = express();
 
-app.use(helmet());
+// CORS: allow any localhost:* (Expo can vary ports like 8081, 19006)
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // curl/postman
+    if (/^http:\/\/localhost:\d+$/.test(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
-app.use(morgan("dev"));
 
-const allowed = (process.env.ALLOWED_ORIGINS ?? "").split(",").filter(Boolean);
-app.use(cors({ origin: allowed.length ? allowed : true }));
+// Public health check
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+// Require Firebase auth after health
+app.use(requireAuth);
 
-//requires Firebase ID token for API routes
-app.use("/api", authMiddleware);
-app.use("/api/relationships", relationships);
-app.use("/api/chats", chats);
+// API routes
+app.use("/api/chats", chatsRouter);
+app.use("/api/relationships", relationshipsRouter);
 
-const port = Number(process.env.PORT ?? 8080);
-app.listen(port, () => console.log(`server on :${port}`));
+// Dev-only helper routes
+if (process.env.NODE_ENV !== "production" && devRouter) {
+  app.use("/api/dev", devRouter);
+}
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`server on :${PORT}`));

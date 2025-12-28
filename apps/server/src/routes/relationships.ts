@@ -1,83 +1,63 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
+
 const r = Router();
 
-// POST /api/relationships/:otherId/request
-r.post("/:otherId/request", async (req, res) => {
-  const uid = (req as any).uid as string;
-  const otherId = req.params.otherId;
-  if (!otherId || otherId === uid) return res.status(400).json({ error: "bad otherId" });
+/** 
+ * Expected minimal Prisma models:
+ * model ChatRequest { id String @id @default(cuid()) fromUid String toUid String status String @default("pending") createdAt DateTime @default(now()) }
+ * model Chat        { id String @id @default(cuid()) isGroup Boolean title String? createdById String participantIds String[] updatedAt DateTime @updatedAt lastMessageText String? members ChatMember[] }
+ * model ChatMember  { id String @id @default(cuid()) chatId String userId String }
+ */
 
-  await prisma.relationship.upsert({
-    where: { ownerId_otherId: { ownerId: uid, otherId } },
-    update: { state: "PENDING", direction: "OUTGOING" },
-    create: { ownerId: uid, otherId, state: "PENDING", direction: "OUTGOING" }
+// List my incoming requests
+r.get("/requests", async (req, res) => {
+  const uid = (req as any).uid as string;
+  const status = (req.query.status as string) ?? "pending";
+  const items = await prisma.chatRequest.findMany({
+    where: { toUid: uid, status },
+    orderBy: { createdAt: "desc" },
   });
-
-  await prisma.relationship.upsert({
-    where: { ownerId_otherId: { ownerId: otherId, otherId: uid } },
-    update: { state: "PENDING", direction: "INCOMING" },
-    create: { ownerId: otherId, otherId: uid, state: "PENDING", direction: "INCOMING" }
-  });
-
-  res.json({ ok: true });
+  res.json({ items });
 });
 
-// POST /api/relationships/:otherId/accept
-r.post("/:otherId/accept", async (req, res) => {
+// Accept -> create or get a 1:1 chat; return chatId
+r.post("/requests/:id/accept", async (req, res) => {
   const uid = (req as any).uid as string;
-  const otherId = req.params.otherId;
+  const id = req.params.id;
+  const cr = await prisma.chatRequest.findUnique({ where: { id } });
+  if (!cr || cr.toUid !== uid) return res.status(404).json({ error: "not found" });
 
-  await prisma.$transaction([
-    prisma.relationship.upsert({
-      where: { ownerId_otherId: { ownerId: uid, otherId } },
-      update: { state: "ACCEPTED", direction: null },
-      create: { ownerId: uid, otherId, state: "ACCEPTED", direction: null }
-    }),
-    prisma.relationship.upsert({
-      where: { ownerId_otherId: { ownerId: otherId, otherId: uid } },
-      update: { state: "ACCEPTED", direction: null },
-      create: { ownerId: otherId, otherId: uid, state: "ACCEPTED", direction: null }
-    }),
-  ]);
+  const pairName = [cr.fromUid, cr.toUid].sort().join("__");
+  let chat = await prisma.chat.findFirst({ where: { isGroup: false, title: pairName } });
+  if (!chat) {
+    chat = await prisma.chat.create({
+      data: {
+        isGroup: false,
+        title: pairName,
+        createdById: uid,
+        participantIds: [cr.fromUid, cr.toUid],
+        members: { create: [{ userId: cr.fromUid }, { userId: cr.toUid }] },
+      },
+      select: { id: true },
+    });
+  }
 
-  res.json({ ok: true });
+  await prisma.chatRequest.update({ where: { id }, data: { status: "accepted" } });
+  res.json({ ok: true, chatId: chat.id });
 });
 
-// POST /api/relationships/:otherId/decline
-r.post("/:otherId/decline", async (req, res) => {
+// Decline
+r.post("/requests/:id/decline", async (req, res) => {
   const uid = (req as any).uid as string;
-  const otherId = req.params.otherId;
-  await prisma.$transaction([
-    prisma.relationship.deleteMany({ where: { ownerId: uid, otherId } }),
-    prisma.relationship.deleteMany({ where: { ownerId: otherId, otherId: uid } }),
-  ]);
-  res.json({ ok: true });
-});
+  const id = req.params.id;
+  const cr = await prisma.chatRequest.findUnique({ where: { id } });
+  if (!cr || cr.toUid !== uid) return res.status(404).json({ error: "not found" });
 
-// POST /api/relationships/:otherId/block
-r.post("/:otherId/block", async (req, res) => {
-  const uid = (req as any).uid as string;
-  const otherId = req.params.otherId;
-
-  await prisma.$transaction([
-    prisma.relationship.upsert({
-      where: { ownerId_otherId: { ownerId: uid, otherId } },
-      update: { state: "BLOCKED", direction: null },
-      create: { ownerId: uid, otherId, state: "BLOCKED", direction: null }
-    }),
-    prisma.relationship.deleteMany({ where: { ownerId: otherId, otherId: uid } }),
-  ]);
-
-  res.json({ ok: true });
-});
-
-// POST /api/relationships/:otherId/unblock
-r.post("/:otherId/unblock", async (req, res) => {
-  const uid = (req as any).uid as string;
-  const otherId = req.params.otherId;
-  await prisma.relationship.deleteMany({ where: { ownerId: uid, otherId, state: "BLOCKED" } });
+  await prisma.chatRequest.update({ where: { id }, data: { status: "declined" } });
   res.json({ ok: true });
 });
 
 export default r;
+
+

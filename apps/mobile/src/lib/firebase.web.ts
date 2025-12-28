@@ -1,40 +1,50 @@
 // src/lib/firebase.web.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
-  getAuth, onAuthStateChanged as webOnAuthChanged,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile,
-  setPersistence, browserLocalPersistence
+  getAuth,
+  onAuthStateChanged as webOnAuthChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
+
 import {
-    getFirestore, serverTimestamp,
-    collection as fsCollection, doc as fsDoc,
-    setDoc, addDoc, onSnapshot, query as fsQuery, where as fsWhere,
-  } from "firebase/firestore";
-  
-  
+  getFirestore,
+  serverTimestamp,
+  getDoc,
+  setDoc,
+  addDoc,
+  onSnapshot,
+  collection as fsCollection,
+  doc as fsDoc,
+  query as fsQuery,
+  where as fsWhere,
+} from "firebase/firestore";
 
 // ⬇️ Put your Web App config here
 const firebaseConfig = {
-    apiKey: "AIzaSyAAXZw8dSnhAh4OTrC1hpGssvkddn0QDfU",
-    authDomain: "socialcirkle-42d8b.firebaseapp.com",
-    projectId: "socialcirkle-42d8b",
-    storageBucket: "socialcirkle-42d8b.firebasestorage.app",
-    messagingSenderId: "896069729535",
-    appId: "1:896069729535:web:f88b8e547ab7b8dc9a60ca",
-    measurementId: "G-ZRTC4QYDJ0"
-  };
+  apiKey: "AIzaSyAAXZw8dSnhAh4OTrC1hpGssvkddn0QDfU",
+  authDomain: "socialcirkle-42d8b.firebaseapp.com",
+  projectId: "socialcirkle-42d8b",
+  storageBucket: "socialcirkle-42d8b.firebasestorage.app",
+  messagingSenderId: "896069729535",
+  appId: "1:896069729535:web:f88b8e547ab7b8dc9a60ca",
+  measurementId: "G-ZRTC4QYDJ0",
+};
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch((e) => {
-    // optional: log but don't crash
-    console.warn("Auth persistence error", e);
-  });
+  console.warn("Auth persistence error", e);
+});
+
 const _db = getFirestore(app);
 
-// --- Adapter so web code can call RNFirebase-style APIs like db.collection(...).doc(...).set(...)
-// Supported: .collection(name).add(data), .doc(id).set(data, options), .onSnapshot(cb), .where(...).onSnapshot(cb)
+// --- Adapter so web code can call RNFirebase-style APIs like db.collection(...).doc(...).get()
 function adaptQuerySnapshot(qs: any) {
   return {
     docs: qs.docs.map((d: any) => ({
@@ -46,6 +56,7 @@ function adaptQuerySnapshot(qs: any) {
 function adaptDocSnapshot(ds: any) {
   return {
     id: ds.id,
+    exists: ds.exists(),
     data: () => ds.data(),
   };
 }
@@ -59,22 +70,42 @@ export const db: any = {
         const dref = fsDoc(_db, name, id);
         return {
           set: (data: any, options?: any) => setDoc(dref, data, options),
-          onSnapshot: (cb: any) => onSnapshot(dref, (snap) => cb(adaptDocSnapshot(snap))),
+          get: async () => adaptDocSnapshot(await getDoc(dref)),
+          onSnapshot: (cb: any, errCb?: any) =>
+            onSnapshot(
+              dref,
+              (snap) => cb(adaptDocSnapshot(snap)),
+              (err) => errCb?.(err)
+            ),
         };
       },
       where: (field: string, op: any, value: any) => {
         const qref = fsQuery(cref, fsWhere(field as any, op as any, value));
         return {
-          onSnapshot: (cb: any) => onSnapshot(qref, (qs) => cb(adaptQuerySnapshot(qs))),
+          onSnapshot: (cb: any, errCb?: any) =>
+            onSnapshot(
+              qref,
+              (qs) => cb(adaptQuerySnapshot(qs)),
+              (err) => errCb?.(err)
+            ),
         };
       },
-      onSnapshot: (cb: any) => onSnapshot(cref, (qs) => cb(adaptQuerySnapshot(qs))),
+      onSnapshot: (cb: any, errCb?: any) =>
+        onSnapshot(
+          cref,
+          (qs) => cb(adaptQuerySnapshot(qs)),
+          (err) => errCb?.(err)
+        ),
     };
   },
 };
 
-// Shim to match native FieldValue usage
-export const firestore = { FieldValue: { serverTimestamp } };
+// Shim to match native FieldValue usage: firestore.FieldValue.serverTimestamp()
+export const firestore = {
+  FieldValue: {
+    serverTimestamp: () => serverTimestamp(),
+  },
+};
 
 // Type parity so the rest of your code compiles on web
 export type FirebaseAuthTypes = { User: import("firebase/auth").User };

@@ -1,97 +1,163 @@
 // src/lib/firebase.web.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import {
-  getAuth, onAuthStateChanged as webOnAuthChanged,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile,
-  setPersistence, browserLocalPersistence
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
+
 import {
-    getFirestore, serverTimestamp,
-    collection as fsCollection, doc as fsDoc,
-    setDoc, addDoc, onSnapshot, query as fsQuery, where as fsWhere,
-  } from "firebase/firestore";
-  
-  
+  getFirestore,
+  collection as fsCollection,
+  doc as fsDoc,
+  addDoc,
+  setDoc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  where as fsWhere,
+  orderBy as fsOrderBy,
+  limit as fsLimit,
+  serverTimestamp,
+  QueryConstraint,
+  CollectionReference,
+  DocumentReference,
+  Query,
+} from "firebase/firestore";
 
-// ⬇️ Put your Web App config here
+// ---- Firebase config ----
 const firebaseConfig = {
-    apiKey: "AIzaSyAAXZw8dSnhAh4OTrC1hpGssvkddn0QDfU",
-    authDomain: "socialcirkle-42d8b.firebaseapp.com",
-    projectId: "socialcirkle-42d8b",
-    storageBucket: "socialcirkle-42d8b.firebasestorage.app",
-    messagingSenderId: "896069729535",
-    appId: "1:896069729535:web:f88b8e547ab7b8dc9a60ca",
-    measurementId: "G-ZRTC4QYDJ0"
-  };
+  apiKey: "AIzaSyAAXZw8dSnhAh4OTrC1hpGssvkddn0QDfU",
+  authDomain: "socialcirkle-42d8b.firebaseapp.com",
+  projectId: "socialcirkle-42d8b",
+  storageBucket: "socialcirkle-42d8b.firebasestorage.app",
+  messagingSenderId: "896069729535",
+  appId: "1:896069729535:web:f88b8e547ab7b8dc9a60ca",
+  measurementId: "G-ZRTC4QYDJ0",
+};
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch((e) => {
-    // optional: log but don't crash
-    console.warn("Auth persistence error", e);
-  });
+// best effort persistence on web
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
 const _db = getFirestore(app);
 
-// --- Adapter so web code can call RNFirebase-style APIs like db.collection(...).doc(...).set(...)
-// Supported: .collection(name).add(data), .doc(id).set(data, options), .onSnapshot(cb), .where(...).onSnapshot(cb)
-function adaptQuerySnapshot(qs: any) {
-  return {
-    docs: qs.docs.map((d: any) => ({
-      id: d.id,
-      data: () => d.data(),
-    })),
-  };
-}
-function adaptDocSnapshot(ds: any) {
-  return {
-    id: ds.id,
-    data: () => ds.data(),
-  };
-}
-
-export const db: any = {
-  collection: (name: string) => {
-    const cref = fsCollection(_db, name);
-    return {
-      add: (data: any) => addDoc(cref, data),
-      doc: (id: string) => {
-        const dref = fsDoc(_db, name, id);
-        return {
-          set: (data: any, options?: any) => setDoc(dref, data, options),
-          onSnapshot: (cb: any) => onSnapshot(dref, (snap) => cb(adaptDocSnapshot(snap))),
-        };
-      },
-      where: (field: string, op: any, value: any) => {
-        const qref = fsQuery(cref, fsWhere(field as any, op as any, value));
-        return {
-          onSnapshot: (cb: any) => onSnapshot(qref, (qs) => cb(adaptQuerySnapshot(qs))),
-        };
-      },
-      onSnapshot: (cb: any) => onSnapshot(cref, (qs) => cb(adaptQuerySnapshot(qs))),
-    };
+export const firestore = {
+  FieldValue: {
+    serverTimestamp,
   },
 };
 
-// Shim to match native FieldValue usage
-export const firestore = { FieldValue: { serverTimestamp } };
+// ---------- Helpers ----------
+function isOdd(n: number) {
+  return n % 2 === 1;
+}
 
-// Type parity so the rest of your code compiles on web
-export type FirebaseAuthTypes = { User: import("firebase/auth").User };
+/**
+ * Converts a path like "feeds/UID/items" into a CollectionReference or DocumentReference.
+ * We need this because your code sometimes passes slash paths.
+ */
+function refFromPath(path: string): { type: "col"; ref: CollectionReference } | { type: "doc"; ref: DocumentReference } {
+  const parts = path.split("/").filter(Boolean);
 
-// Cross-platform helpers (same signatures as native)
-export function onAuthChanged(cb: (u: FirebaseAuthTypes["User"] | null) => void) {
-  return webOnAuthChanged(auth, cb);
+  // Even parts => doc path, odd parts => collection path
+  if (parts.length === 0) {
+    throw new Error("Empty path");
+  }
+
+  if (isOdd(parts.length)) {
+    // collection path: col/doc/col/doc/col
+    let colRef: any = fsCollection(_db, parts[0]);
+    for (let i = 1; i < parts.length; i++) {
+      if (isOdd(i)) {
+        // doc id
+        colRef = fsDoc(colRef, parts[i]);
+      } else {
+        // subcollection name
+        colRef = fsCollection(colRef, parts[i]);
+      }
+    }
+    return { type: "col", ref: colRef as CollectionReference };
+  } else {
+    // doc path: col/doc/col/doc
+    let docRef: any = fsDoc(_db, parts[0], parts[1]);
+    for (let i = 2; i < parts.length; i += 2) {
+      docRef = fsDoc(fsCollection(docRef, parts[i]), parts[i + 1]);
+    }
+    return { type: "doc", ref: docRef as DocumentReference };
+  }
 }
-export async function signUpEmail(email: string, password: string, displayName?: string) {
-  const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-  if (displayName) await updateProfile(cred.user, { displayName });
-  return cred.user;
+
+// ---------- V8-like wrappers ----------
+type SnapCb = (snap: any) => void;
+
+function wrapQuery(q: Query) {
+  return {
+    where: (field: string, op: any, value: any) => wrapQuery(query(q, fsWhere(field as any, op, value))),
+    orderBy: (field: string, dir: "asc" | "desc" = "asc") => wrapQuery(query(q, fsOrderBy(field as any, dir))),
+    limit: (n: number) => wrapQuery(query(q, fsLimit(n))),
+    onSnapshot: (cb: SnapCb) =>
+      onSnapshot(q, (snap) => {
+        cb({
+          forEach: (fn: any) => snap.forEach((d) => fn({ id: d.id, data: () => d.data() })),
+        });
+      }),
+    get: async () => {
+      const snap = await getDocs(q);
+      return {
+        forEach: (fn: any) => snap.forEach((d) => fn({ id: d.id, data: () => d.data() })),
+      };
+    },
+  };
 }
-export async function signInEmail(email: string, password: string) {
-  const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-  return cred.user;
+
+function wrapCollection(cref: CollectionReference, constraints: QueryConstraint[] = []) {
+  const q = constraints.length ? query(cref, ...constraints) : (cref as any);
+
+  return {
+    add: (data: any) => addDoc(cref, data),
+    doc: (id: string) => wrapDoc(fsDoc(cref, id)),
+    where: (field: string, op: any, value: any) => wrapCollection(cref, [...constraints, fsWhere(field as any, op, value)]),
+    orderBy: (field: string, dir: "asc" | "desc" = "asc") => wrapCollection(cref, [...constraints, fsOrderBy(field as any, dir)]),
+    limit: (n: number) => wrapCollection(cref, [...constraints, fsLimit(n)]),
+    onSnapshot: (cb: SnapCb) => wrapQuery(query(cref, ...constraints)).onSnapshot(cb),
+    get: async () => wrapQuery(query(cref, ...constraints)).get(),
+  };
 }
-export function signOutUser() {
-  return signOut(auth);
+
+function wrapDoc(dref: DocumentReference) {
+  return {
+    set: (data: any, options?: any) => setDoc(dref, data, options),
+    get: async () => {
+      const snap = await getDoc(dref);
+      return { exists: () => snap.exists(), data: () => snap.data() };
+    },
+    onSnapshot: (cb: SnapCb) =>
+      onSnapshot(dref, (snap) => cb({ exists: () => snap.exists(), data: () => snap.data() })),
+    collection: (name: string) => wrapCollection(fsCollection(dref, name)),
+  };
 }
+
+// Main db with support for BOTH:
+// db.collection("feeds").doc(uid).collection("items")
+// AND db.collection("feeds/uid/items")  (if you accidentally do that)
+export const db = {
+  collection: (path: string) => {
+    const r = refFromPath(path);
+    if (r.type !== "col") {
+      throw new Error(`Path "${path}" is a document path, not a collection path`);
+    }
+    return wrapCollection(r.ref);
+  },
+  doc: (path: string) => {
+    const r = refFromPath(path);
+    if (r.type !== "doc") {
+      throw new Error(`Path "${path}" is a collection path, not a document path`);
+    }
+    return wrapDoc(r.ref);
+  },
+};

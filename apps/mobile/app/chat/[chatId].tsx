@@ -1,29 +1,25 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, View, Text, KeyboardAvoidingView, Platform } from 'react-native';
-import { getMessages, sendMessage, type Message } from '../../src/services/chats';
-// ✅ fixed import path (no src/)
-import MessageInput from '../../components/MessageInput';
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { FlatList, View, Text, KeyboardAvoidingView, Platform } from "react-native";
+import { onMessages, sendMessage, type Message } from "../../src/services/chats";
+import MessageInput from "../../components/MessageInput";
 
 export default function ChatScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const [msgs, setMsgs] = useState<Message[]>([]);
   const listRef = useRef<FlatList>(null);
 
-  async function load() {
+  useEffect(() => {
     if (!chatId) return;
-    const data = await getMessages(String(chatId));
-    setMsgs(data);
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
-  }
-
-  useEffect(() => { load(); }, [chatId]);
+    const off = onMessages(String(chatId), (data) => {
+      setMsgs(data);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    });
+    return () => off?.();
+  }, [chatId]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
       <FlatList
         ref={listRef}
         data={msgs}
@@ -37,13 +33,14 @@ export default function ChatScreen() {
           </View>
         )}
       />
+
       <MessageInput
         onSend={async (text) => {
+          if (!chatId) return;
           await sendMessage(String(chatId), text);
-          await load();
+          // ✅ no reload needed; realtime listener updates msgs
         }}
       />
     </KeyboardAvoidingView>
   );
 }
-

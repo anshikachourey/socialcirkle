@@ -4,11 +4,12 @@ import { View, Text, ActivityIndicator } from "react-native";
 import * as Location from "expo-location";
 import MapView from "../../src/features/map/MapView";
 import { auth } from "../../src/lib/firebase";
-import { onUserVisibility, saveSelfLocation } from "../../src/services/userSettings";
+import { onUserSettings } from "../../src/services/settings";
+import { saveMyLocation } from "../../src/services/locations";
+import { ensureDirectChat } from "../../src/services/chats";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { onVisibleUsers, PublicUser } from "../../src/services/visibleUsers";
 import { haversineMeters } from "../../src/features/map/distance";
-import { ensureChat } from "../../src/services/chats";
 import { onMyRelationships, requestChat } from "../../src/services/relationships";
 
 import { router } from "expo-router";
@@ -30,7 +31,7 @@ export default function MapTab() {
 
   // other users
   const [others, setOthers] = useState<PublicUser[]>([]);
-  const [rels, setRels] = useState<Record<string, "pending" | "accepted" | "blocked">>({});
+  const [rels, setRels] = useState<Record<string, "pending" | "accepted" | "blocked" | null>>({});
 
   const wroteOnceRef = useRef(false);
 
@@ -44,18 +45,34 @@ export default function MapTab() {
   }, []);
   useEffect(() => {
     if (!uid) return;
+<<<<<<< Updated upstream
     const off = onMyRelationships(setRels);
     return off;        
+=======
+    const off = onMyRelationships((rows) => {
+      const next: Record<string, "pending" | "accepted" | "blocked"> = {};
+      for (const r of rows) {
+        if (r.status === "friend") next[r.uid] = "accepted";
+        else if (r.status === "requested" || r.status === "incoming") next[r.uid] = "pending";
+        else if (r.status === "blocked") next[r.uid] = "blocked";
+      }
+      setRels(next);
+    });
+    return off;
+>>>>>>> Stashed changes
   }, [uid]);
   // subscribe to my visibility
   useEffect(() => {
     setVisLoaded(false);
     if (!uid) return;
-    const off = onUserVisibility(uid, (v) => {
-      setVisible(!!v.visible);
-      setRadiusMeters(v.radiusMeters ?? null);
+
+    const off = onUserSettings(uid, (s) => {
+      setVisible(!!s.visible);
+      setRadiusMeters(s.radiusMeters ?? null);
       setVisLoaded(true);
     });
+    
+
     return () => off?.();
   }, [uid]);
 
@@ -75,7 +92,8 @@ export default function MapTab() {
       setLocLoading(false);
       if (uid && !wroteOnceRef.current) {
         wroteOnceRef.current = true;
-        saveSelfLocation(uid, c.lat, c.lng).catch(() => {});
+        saveMyLocation(uid, c).catch(() => {});
+
       }
     })();
   }, [uid]);
@@ -144,11 +162,12 @@ export default function MapTab() {
     if (action === "chat") {
       const me = auth.currentUser?.uid;
       if (!me) return router.replace("/login");
-      ensureChat(me, userId)
-        .then(() => router.replace("/(tabs)/chat"))
-        .catch((e) => console.warn("ensureChat failed:", e?.message ?? e));
-    }
-  }   
+    
+      ensureDirectChat(userId).then(({ id }) => router.push(`/chat/${id}`))
+
+    }    
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <MapView

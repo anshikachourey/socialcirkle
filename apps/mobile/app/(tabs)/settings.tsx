@@ -36,21 +36,27 @@ export default function Settings() {
 
   useEffect(() => {
     if (!uid) { router.replace("/(tabs)/login"); return; }
-    const off = db.collection("users").doc(uid).onSnapshot((snap: any) => {
+  
+    const offUser = db.collection("users").doc(uid).onSnapshot((snap:any) => {
       const d = snap?.data?.() as UserDoc | undefined;
       if (d) {
         setDisplayName(d.displayName ?? "");
         setUsername(d.username ?? "");
         setBio(d.bio ?? "");
         setPhotoURL(d.photoURL ?? "");
-        const v = d.visibility ?? { visible: false, radiusMeters: null };
-        setVisible(!!v.visible);
-        setRadius(v.radiusMeters ?? null);
       }
-      setLoading(false);
-    }, () => setLoading(false));
-    return () => off?.();
+    });
+  
+    const offSettings = db.collection("userSettings").doc(uid).onSnapshot((snap:any) => {
+      const s = snap?.data?.() ?? {};
+      setVisible(!!s.visible);
+      setRadius(s.radiusMeters ?? null);
+    });
+  
+    setLoading(false);
+    return () => { offUser?.(); offSettings?.(); };
   }, [uid]);
+  
 
   async function save() {
     if (!uid) return;
@@ -67,11 +73,17 @@ export default function Settings() {
       displayName: displayName.trim() || null,
       username: username.trim() || null,
       bio: bio.trim() || null,
-      photoURL: photoURL.trim() || null, // simple URL field which needs to be replaced with a way to upload a profile photo
-      visibility: { visible, radiusMeters: visible ? r : null },
+      photoURL: photoURL.trim() || null,
       profileComplete: true,
       updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),
     }, { merge: true });
+    
+    await db.collection("userSettings").doc(uid).set({
+      visible,
+      radiusMeters: visible ? r : null,
+      updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),
+    }, { merge: true });
+    
     Alert.alert("Saved!");
     router.replace("/(tabs)/profile");
   }

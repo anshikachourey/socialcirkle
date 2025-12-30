@@ -1,6 +1,7 @@
 // src/lib/firebase.native.ts
 import rnAuth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import rnFirestore from "@react-native-firebase/firestore";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 // Instances
 export const auth = rnAuth();

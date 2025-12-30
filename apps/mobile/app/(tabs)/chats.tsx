@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
-import { listChats, type Chat } from '../../src/services/chats';
+import { onMyChats, type Chat } from "../../src/services/chats";
 import { useRouter } from 'expo-router';
 
 export default function ChatsTab() {
@@ -18,7 +18,10 @@ export default function ChatsTab() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const off = onMyChats(setItems);
+    return () => off?.();
+  }, []);
 
   return (
     <FlatList
@@ -28,9 +31,9 @@ export default function ChatsTab() {
       renderItem={({ item }) => (
         <TouchableOpacity onPress={() => router.push(`/chat/${item.id}`)}>
           <View className="px-4 py-3 border-b border-gray-200">
-            <Text className="font-semibold">
-              {item.isGroup ? (item.title || 'Group') : 'Direct Message'}
-            </Text>
+          <Text className="font-semibold">
+            {item.type === "group" ? (item.name || "Group") : (item.name || "Direct Message")}
+          </Text>
             <Text className="text-gray-600" numberOfLines={1}>
               {item.lastMessageText ?? 'No messages yet'}
             </Text>

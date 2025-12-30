@@ -1,6 +1,7 @@
-// src/lib/auth-context.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { onAuthChanged, signInEmail, signUpEmail, signOutUser, auth } from "@/lib/firebase";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+
+import { auth, signInEmail, signUpEmail, signOutUser } from "@/lib/firebase";
 import type { FirebaseAuthTypes } from "@/lib/firebase";
 
 type AuthContextType = {
@@ -13,13 +14,13 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: any }) {
   const [user, setUser] = useState<FirebaseAuthTypes["User"] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthChanged((u) => {
-      setUser(u);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u as any);
       setLoading(false);
     });
     return unsub;
@@ -45,11 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOutFn: AuthContextType["signOut"] = async () => {
     await signOutUser();
-    // onAuthChanged will set user=null; updating immediately helps UI
-    setUser(auth.currentUser);
+    setUser(null);
   };
 
-  const value = useMemo(() => ({ user, loading, signUp, signIn, signOut: signOutFn }), [user, loading]);
+  const value = useMemo(
+    () => ({ user, loading, signUp, signIn, signOut: signOutFn }),
+    [user, loading]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -55,12 +55,22 @@ export default function Setup() {
     await db.collection("users").doc(uid).set(
       {
         displayName: name.trim() || null,
-        visibility: { visible, radiusMeters: visible ? r : null },
         profileComplete: true,
         updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),
       },
       { merge: true }
     );
+    
+    await db.collection("userSettings").doc(uid).set(
+      {
+        visible,
+        radiusMeters: visible ? r : null,
+        status: "Available",
+        updatedAt: firestore.FieldValue?.serverTimestamp?.() ?? new Date(),
+      },
+      { merge: true }
+    );
+    
 
     router.replace("/(tabs)/map");
   }
